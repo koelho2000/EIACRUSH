@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EIA Crush - Energy in Action</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            touch-action: none; /* Impede gestos do browser como puxar para atualizar */
+            overscroll-behavior: none;
+        }
+        .game-board {
+            display: grid;
+            border: 4px solid #4a5568;
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            padding: 8px;
+            gap: 4px;
+        }
+        .gem {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            background: radial-gradient(circle, #6b7280, #374151);
+            border-radius: 20%;
+            box-shadow: 
+                inset 0 4px 6px rgba(255, 255, 255, 0.2), /* Brilho superior interno */
+                inset 0 -4px 6px rgba(0, 0, 0, 0.3),   /* Sombra inferior interna */
+                0 5px 10px rgba(0, 0, 0, 0.5);       /* Sombra projetada no tabuleiro */
+        }
+        .gem svg {
+            width: 65%;
+            height: 65%;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+            pointer-events: none; /* Garante que o clique vai para o div .gem */
+        }
+        .gem.is-selected {
+            transform: scale(1.1);
+            box-shadow: 
+                inset 0 4px 6px rgba(255, 255, 255, 0.2),
+                inset 0 -4px 6px rgba(0, 0, 0, 0.3),
+                0 5px 10px rgba(0, 0, 0, 0.5),
+                0 0 0 4px white;
+        }
+        /* Estilos para Super Ícones */
+        .gem.super-striped-h::after, .gem.super-striped-v::after {
+            content: '';
+            position: absolute;
+            top: 10%; bottom: 10%; left: 10%; right: 10%;
+            border-radius: 50%;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255,255,255,0.3),
+                rgba(255,255,255,0.3) 10px,
+                rgba(255,255,255,0) 10px,
+                rgba(255,255,255,0) 20px
+            );
+            animation: pulse-light 1.5s infinite;
+        }
+        .gem.super-striped-v::after {
+             background: repeating-linear-gradient(
+                -45deg,
+                rgba(255,255,255,0.3),
+                rgba(255,255,255,0.3) 10px,
+                rgba(255,255,255,0) 10px,
+                rgba(255,255,255,0) 20px
+            );
+        }
+        .gem.super-wrapped::before {
+            content: '';
+            position: absolute;
+            top: 5%; bottom: 5%; left: 5%; right: 5%;
+            border: 4px solid white;
+            border-radius: 50%;
+            animation: pulse-light 1.2s infinite ease-in-out;
+        }
+        .gem.super-color-bomb svg {
+            animation: color-bomb-spin 5s linear infinite;
+        }
+        @keyframes color-bomb-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulse-light {
+            0% { box-shadow: 0 0 5px #fff, 0 0 10px #fff; }
+            50% { box-shadow: 0 0 20px #fff, 0 0 30px #fff; }
+            100% { box-shadow: 0 0 5px #fff, 0 0 10px #fff; }
+        }
+        .gem.is-exploding {
+            animation: explode 0.5s forwards;
+        }
+        @keyframes explode {
+            0% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        .modal {
+            display: none; /* Escondido por defeito */
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            animation: slide-down 0.5s ease-out;
+        }
+        @keyframes slide-down {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            animation: fade-in-out 2s forwards;
+        }
+        @keyframes fade-in-out {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -80%) scale(0.5); }
+        }
+        .low-time, .low-moves {
+            animation: flash-red 1s infinite;
+        }
+        @keyframes flash-red {
+            0%, 100% { color: white; transform: scale(1); }
+            50% { color: #ef4444; transform: scale(1.1); }
+        }
+        .hint {
+            animation: hint-pulse 1s infinite;
+        }
+        @keyframes hint-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .point-popup {
+            position: absolute;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #facc15;
+            text-shadow: 2px 2px 4px black;
+            pointer-events: none;
+            animation: float-up 1s forwards;
+        }
+        .point-popup.special {
+            font-size: 3rem;
+            color: #ec4899;
+        }
+        @keyframes float-up {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-60px); opacity: 0; }
+        }
+        /* Mapa de Níveis */
+        .level-node {
+            width: 50px; height: 50px;
+            border: 4px solid #9ca3af;
+            background-color: #4b5563;
+            cursor: pointer;
+        }
+        .level-node.unlocked {
+            background-color: #a855f7;
+            border-color: #c4b5fd;
+            animation: pulse-level 2s infinite;
+        }
+        @keyframes pulse-level {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(196, 181, 253, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 10px 10px rgba(196, 181, 253, 0); }
+        }
+        .level-node.completed {
+            background-color: #16a34a;
+            border-color: #86efac;
+        }
+        .world-tab {
+            transition: all 0.3s ease;
+        }
+        .world-tab.active {
+            background-color: #a855f7;
+            color: white;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-white overflow-hidden h-screen">
+
+    <div id="app" class="h-full w-full">
+        <!-- O JOGO SERÁ RENDERIZADO AQUI -->
+    </div>
+
+    <!-- Templates para os ecrãs do jogo -->
+    <template id="main-menu-template">
+        <div class="flex flex-col items-center justify-center h-full bg-gray-900 p-4">
+            <h1 class="text-6xl font-bold text-yellow-400 mb-2" style="text-shadow: 3px 3px 0 #92400e;">EIA Crush</h1>
+            <p class="text-xl text-gray-300 mb-8">Energy in Action</p>
+            <div id="auth-buttons" class="flex flex-col gap-4">
+                 <button id="login-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-10 rounded-full text-2xl transition-transform transform hover:scale-105 shadow-lg">Login</button>
+                 <button id="register-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-10 rounded-full text-2xl transition-transform transform hover:scale-105 shadow-lg">Registar</button>
+                 <button id="guest-play-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105 shadow-lg">Jogar como Convidado</button>
+            </div>
+            <div id="user-info" class="hidden text-center">
+                <p class="text-2xl mb-4">Bem-vindo, <span id="username-display"></span>!</p>
+                <button id="play-map-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-10 rounded-full text-2xl transition-transform transform hover:scale-105 shadow-lg">
+                    Jogar
+                </button>
+                <div class="mt-8 text-lg">Vidas: <span id="menu-lives-display" class="font-bold">5</span></div>
+                <div class="mt-4 text-lg">Pontuação Total: <span id="menu-total-score-display" class="font-bold">0</span></div>
+            </div>
+             <button id="hall-of-fame-btn" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full text-lg">Hall of Fame</button>
+            <div class="flex space-x-6 mt-8">
+                <a href="https://www.tiktok.com/@koelho2000" target="_blank" class="text-gray-400 hover:text-white transition-transform transform hover:scale-110">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-2.43.05-4.85-.98-6.46-2.9-1.6-1.92-2.3-4.41-2.06-6.93.24-2.52 1.86-4.86 4.03-5.9 2.17-1.04 4.66-.98 6.78.15.01-.01.01-.02.01-.03.01-2.2 0-4.4-.01-6.6.01-1.21-.43-2.37-1.12-3.32C11.37 1.42 10.11.41 8.7.11c-.02.01-.02.01-.03.01.01-.01.01-.01.02-.01z"/></svg>
+                </a>
+                <a href="https://www.instagram.com/eia_energyinaction/" target="_blank" class="text-gray-400 hover:text-white transition-transform transform hover:scale-110">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-2.455 0-2.755.01-3.71.054-1.44.065-2.387.31-3.227.643-.913.35-1.64.78-2.366 1.507-.725.726-1.156 1.452-1.507 2.366-.333.84-.578 1.787-.643 3.227-.044.955-.054 1.255-.054 3.71s.01 2.755.054 3.71c.065 1.44.31 2.387.643 3.227.35.913.782 1.64 1.507 2.366.726.725 1.452 1.156 2.366 1.507.84.333 1.787.578 3.227.643.955.044 1.255.054 3.71.054s2.755-.01 3.71-.054c1.44-.065 2.387-.31 3.227-.643.913-.35 1.64-.782 2.366-1.507.725-.726 1.156-1.452 1.507-2.366.333-.84.578-1.787-.643-3.227.044-.955.054-1.255.054-3.71s-.01-2.755-.054-3.71c-.065-1.44-.31-2.387-.643-3.227-.35-.913-.78-1.64-1.507-2.366-.726-.725-1.452-1.156-2.366-1.507-.84-.333-1.787-.578-3.227-.643C14.755 2.26 14.455 2.25 12 2.25zm0 1.8a8.949 8.949 0 00-3.638.052c-1.21.054-1.92.27-2.48.473-.616.22-.98.44-1.32.78-.34.34-.56.704-.78 1.32-.203.56-.419 1.27-.473 2.48A8.949 8.949 0 004.05 12c0 2.41.01 2.71.052 3.638.054 1.21.27 1.92.473 2.48.22.616.44.98.78 1.32.34.34.704.56 1.32.78.56.203 1.27.419 2.48.473A8.949 8.949 0 0012 19.95c2.41 0 2.71-.01 3.638-.052 1.21-.054 1.92-.27 2.48-.473.616-.22-.98-.44 1.32-.78.34.34.56-.704-.78-1.32.203-.56.419-1.27.473-2.48A8.949 8.949 0 0019.95 12c0-2.41-.01-2.71-.052-3.638-.054-1.21-.27-1.92-.473-2.48-.22-.616-.44-.98-.78-1.32-.34-.34-.704-.56-1.32-.78-.56-.203-1.27-.419-2.48-.473A8.949 8.949 0 0012 4.05zm0 3.6a4.35 4.35 0 100 8.7 4.35 4.35 0 000-8.7zm0 1.8a2.55 2.55 0 110 5.1 2.55 2.55 0 010-5.1zM16.5 6.3a1.2 1.2 0 11-2.4 0 1.2 1.2 0 012.4 0z" clip-rule="evenodd"/></svg>
+                </a>
+                <a href="https://youtube.com/playlist?list=PLHHMjSyJQeBCFjuuPaqrhqMic374sFIkG&si=GimZ3c0V-wMgoMSo" target="_blank" class="text-gray-400 hover:text-white transition-transform transform hover:scale-110">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.823v-7.04l6.02 3.52-6.02 3.52z"/></svg>
+                </a>
+            </div>
+             <a href="https://www.eia.pt" target="_blank" class="absolute bottom-4 text-center text-gray-400 text-sm hover:text-white">www.eia.pt</a>
+        </div>
+    </template>
+
+    <template id="world-map-template">
+        <div class="flex flex-col items-center justify-center h-full bg-gray-900 p-4">
+            <div class="flex items-center justify-center w-full max-w-md relative mb-2">
+                 <h2 class="text-4xl font-bold">Mapa de Mundos</h2>
+                 <button id="world-help-btn" class="absolute right-0 text-white bg-blue-500 hover:bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center font-bold text-2xl">?</button>
+            </div>
+            <div class="text-xl font-bold mb-4">Pontuação Total: <span id="map-total-score-display">0</span></div>
+            <div id="world-tabs" class="flex flex-wrap justify-center gap-2 mb-4">
+                <!-- Tabs dos mundos serão inseridas aqui -->
+            </div>
+            <div id="level-grid" class="grid grid-cols-5 gap-4 p-4 bg-gray-800 rounded-lg w-full max-w-md h-64 overflow-y-auto">
+                <!-- Os nós dos níveis serão inseridos aqui -->
+            </div>
+            <div class="flex gap-4 mt-6">
+                <button id="back-to-main-menu-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full text-lg">Menu Principal</button>
+                <button id="unlock-btn" class="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-2 px-6 rounded-full text-lg">Desbloquear</button>
+                <button id="logout-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full text-lg">Logout</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="game-screen-template">
+         <div id="game-container" class="flex flex-col items-center justify-center h-full w-full p-2 sm:p-4 transition-colors duration-1000">
+            <!-- Total Score Bar -->
+            <div class="w-full max-w-lg bg-yellow-500 text-black p-1 text-center rounded-t-xl shadow-md">
+                <span class="text-sm font-bold">PONTUAÇÃO TOTAL: </span>
+                <span id="game-total-score-display" class="text-lg font-bold">0</span>
+            </div>
+            <!-- Header -->
+            <div class="w-full max-w-lg bg-black bg-opacity-30 p-2 flex justify-between items-center">
+                <div class="text-center">
+                    <div class="text-sm opacity-80">Nível</div>
+                    <div id="game-level-display" class="text-2xl font-bold">1</div>
+                </div>
+                 <div class="text-center">
+                    <div class="text-sm opacity-80">Herói</div>
+                    <div id="game-character-display" class="text-xl font-semibold">Sunny</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm opacity-80">Vidas</div>
+                    <div id="game-lives-display" class="text-2xl font-bold">3</div>
+                </div>
+                 <button id="help-btn" class="text-white bg-blue-500 hover:bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">?</button>
+            </div>
+            <!-- Game Board -->
+            <div id="game-board-container" class="w-full max-w-lg aspect-square p-2 relative">
+                <div id="game-board" class="game-board w-full h-full rounded-lg"></div>
+            </div>
+            <!-- Footer -->
+            <div class="w-full max-w-lg bg-black bg-opacity-30 p-2 rounded-b-xl grid grid-cols-3 gap-2 text-center">
+                <div>
+                    <div class="text-sm opacity-80">Pontos</div>
+                    <div id="game-score-display" class="text-2xl font-bold">0</div>
+                </div>
+                <div>
+                    <div class="text-sm opacity-80">Objetivo</div>
+                    <div id="game-target-display" class="text-2xl font-bold">5000</div>
+                </div>
+                <div id="moves-or-time-display">
+                    <div class="text-sm opacity-80">Jogadas</div>
+                    <div id="game-moves-display" class="text-2xl font-bold">30</div>
+                </div>
+            </div>
+             <button id="quit-level-btn" class="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full text-sm">
+                Sair do Nível
+            </button>
+        </div>
+    </template>
+
+
+    <!-- Modal de Início de Nível -->
+    <div id="level-start-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4">
+            <img id="start-char-img" src="https://placehold.co/150x150/f59e0b/ffffff?text=S" class="mx-auto mb-4 rounded-full border-4 border-yellow-400">
+            <h2 class="text-3xl font-bold mb-2">Nível <span id="start-level">1</span></h2>
+            <p class="text-lg mb-4">Objetivo: <span id="start-target" class="font-bold">500</span> pontos</p>
+            <div id="start-modal-extra-info" class="text-lg mb-4"></div>
+            <button id="start-game-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105">Jogar</button>
+            <a href="https://www.eia.pt" target="_blank" class="block text-center text-gray-400 mt-4 text-sm hover:text-white">www.eia.pt</a>
+        </div>
+    </div>
+
+    <!-- Modal de Nível Concluído -->
+    <div id="level-complete-modal" class="modal">
+        <div class="modal-content bg-green-600 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4">
+            <h2 class="text-4xl font-bold mb-2">Nível Concluído!</h2>
+            <img id="complete-char-img" src="https://placehold.co/150x150/10b981/ffffff?text=EIA" class="mx-auto mb-4 rounded-full border-4 border-green-300">
+            
+            <div id="bonus-points-container" class="text-lg mb-4">
+                <p>Pontos do Nível: <span id="level-score-display">0</span></p>
+                <p>Bónus: <span id="bonus-score-display">0</span></p>
+                <hr class="my-2 border-green-300">
+                <p class="text-2xl font-bold">Total: <span id="final-score">0</span></p>
+            </div>
+
+            <p id="complete-char-message" class="italic text-lg mb-6">"Bom trabalho! Cada ponto é energia bem aplicada!"</p>
+            <button id="next-level-btn" class="bg-white text-green-600 font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105">Próximo Nível</button>
+            <a href="https://www.eia.pt" target="_blank" class="block text-center text-green-100 mt-4 text-sm hover:text-white">www.eia.pt</a>
+        </div>
+    </div>
+    
+    <!-- Modal de Introdução ao Nível Bónus -->
+    <div id="bonus-level-modal" class="modal">
+        <div class="modal-content bg-yellow-500 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4">
+            <h2 class="text-4xl font-bold mb-2">Nível Bónus!</h2>
+             <img id="bonus-char-img" src="https://placehold.co/150x150/f59e0b/ffffff?text=EIA" class="mx-auto mb-4 rounded-full border-4 border-yellow-300">
+            <p id="bonus-char-name" class="text-2xl font-semibold mb-4">Super Desafio de Sunny!</p>
+            <p id="bonus-char-efficiency-message" class="italic text-lg mb-6">"Use o sol com sabedoria — horários de maior produção fotovoltaica reduzem custos."</p>
+            <button id="start-bonus-btn" class="bg-white text-yellow-600 font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105">Começar!</button>
+            <a href="https://www.eia.pt" target="_blank" class="block text-center text-yellow-100 mt-4 text-sm hover:text-white">www.eia.pt</a>
+        </div>
+    </div>
+
+    <!-- Modal de Fim de Jogo -->
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content bg-red-600 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4">
+            <h2 class="text-4xl font-bold mb-2">Fim de Jogo!</h2>
+            <p id="game-over-message" class="text-xl mb-6">Ficaste sem movimentos. Perdeste uma vida!</p>
+            <div id="game-over-buttons" class="space-y-3">
+                <!-- Botões são inseridos dinamicamente -->
+            </div>
+             <a href="https://www.eia.pt" target="_blank" class="block text-center text-red-100 mt-4 text-sm hover:text-white">www.eia.pt</a>
+        </div>
+    </div>
+    
+    <!-- Modal de Ajuda do Jogo -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-6 rounded-2xl shadow-2xl text-left max-w-lg w-11/12 mx-4 relative">
+            <h2 class="text-3xl font-bold mb-4 text-center text-yellow-400">Guia do Jogo</h2>
+            <button id="close-help-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">X</button>
+            
+            <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                <div>
+                    <h3 class="text-xl font-bold text-purple-400">Mecânica Básica</h3>
+                    <p>Troca duas peças adjacentes (na vertical ou horizontal) para criar uma linha de 3 ou mais peças iguais. As peças combinadas desaparecem e novas peças caem do topo.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-purple-400">Pontuação e Bónus</h3>
+                    <p>Ganha 10 pontos por cada peça. Numa só jogada, mais de 200 pontos dão bónus: +5 jogadas ou +5 segundos. Se passares dos 500 pontos, o bónus de tempo sobe para +10 segundos!</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-purple-400">Super Ícones</h3>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li><strong>Peça Listada (Combina 4):</strong> Limpa uma linha ou coluna inteira.</li>
+                        <li><strong>Peça Embrulhada (Combina 5 em "L" ou "T"):</strong> Explode num raio de 3x3.</li>
+                        <li><strong>Bomba de Cor (Combina 5 em linha):</strong> Remove todas as peças da cor com que for trocada.</li>
+                    </ul>
+                </div>
+                 <div>
+                    <h3 class="text-xl font-bold text-purple-400">Mega Combos</h3>
+                    <p>Combina dois Super Ícones para efeitos devastadores!</p>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li><strong>Listada + Listada:</strong> Limpa uma linha E uma coluna.</li>
+                        <li><strong>Listada + Embrulhada:</strong> Limpa 3 linhas e 3 colunas.</li>
+                        <li><strong>Bomba de Cor + Qualquer Super Ícone:</strong> Transforma todas as peças da cor do super ícone nesse mesmo super ícone, ativando-os todos de uma vez.</li>
+                        <li><strong>Bomba de Cor + Bomba de Cor:</strong> Limpa o tabuleiro inteiro!</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-purple-400">Legenda de Ícones</h3>
+                    <div id="icon-legend-container" class="space-y-2 mt-2">
+                        <!-- A legenda será preenchida por JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Ajuda do Mapa -->
+    <div id="world-help-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-6 rounded-2xl shadow-2xl text-left max-w-lg w-11/12 mx-4 relative">
+            <h2 id="world-help-title" class="text-3xl font-bold mb-4 text-center text-yellow-400">Objetivos do Mundo 1</h2>
+            <button id="close-world-help-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">X</button>
+            <div id="world-help-levels-container" class="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+                <!-- Detalhes dos níveis serão inseridos aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Desbloqueio -->
+    <div id="unlock-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4">
+            <h2 class="text-3xl font-bold mb-4">Desbloquear Níveis</h2>
+            <p class="text-gray-400 mb-4">Insira o código secreto para desbloquear todos os níveis.</p>
+            <input id="unlock-code-input" type="text" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="CÓDIGO SECRETO">
+            <div id="unlock-feedback" class="text-red-500 h-6 mb-2"></div>
+            <div class="flex gap-4 justify-center">
+                 <button id="submit-unlock-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full">Confirmar</button>
+                 <button id="cancel-unlock-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Login -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-8 rounded-2xl shadow-2xl text-center max-w-sm w-11/12 mx-4">
+            <h2 class="text-3xl font-bold mb-4">Login</h2>
+            <input id="login-email" type="email" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="Email">
+            <input id="login-password" type="password" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="Palavra-passe">
+            <div id="login-feedback" class="text-red-500 h-6 mb-2"></div>
+            <div class="flex gap-4 justify-center">
+                 <button id="submit-login-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-full">Entrar</button>
+                 <button id="cancel-login-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Registo -->
+    <div id="register-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-8 rounded-2xl shadow-2xl text-center max-w-sm w-11/12 mx-4">
+            <h2 class="text-3xl font-bold mb-4">Registar</h2>
+            <input id="register-name" type="text" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="Nome">
+            <input id="register-email" type="email" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="Email">
+            <input id="register-password" type="password" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="Palavra-passe">
+            <div id="register-feedback" class="text-red-500 h-6 mb-2"></div>
+            <div class="flex gap-4 justify-center">
+                 <button id="submit-register-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full">Registar</button>
+                 <button id="cancel-register-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Hall of Fame -->
+    <div id="hall-of-fame-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-6 rounded-2xl shadow-2xl text-left max-w-lg w-11/12 mx-4 relative">
+            <h2 class="text-3xl font-bold mb-4 text-center text-yellow-400">Hall of Fame</h2>
+            <button id="close-hof-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">X</button>
+            <div id="hall-of-fame-content" class="space-y-2 max-h-[70vh] overflow-y-auto pr-2">
+                <!-- O ranking será inserido aqui -->
+                <p class="text-center">A carregar o ranking...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup de Super Ícone -->
+    <div id="super-icon-popup" class="popup bg-purple-500"></div>
+    <div id="bonus-popup" class="popup bg-green-500"></div>
+
+
+    <script type="module">
+        // --- CONFIGURAÇÃO DO JOGO (VERSÃO LOCAL) ---
+        
+        const appContainer = document.getElementById('app');
+        // Variáveis para os elementos do DOM
+        let gameBoard, scoreDisplay, movesDisplay, levelDisplay, characterNameDisplay, targetScoreDisplay, menuLivesDisplay, gameLivesDisplay, menuTotalScoreDisplay, mapTotalScoreDisplay, gameTotalScoreDisplay;
+        
+        // Variável para guardar o estado do utilizador logado
+        let currentUser = null;
+
+        const HEROES = [
+            { 
+                name: 'Sunny', color: 'yellow', img: 'https://placehold.co/150x150/f59e0b/ffffff?text=S', 
+                messages: [
+                    "Energia limpa a brilhar!", "Um passo de cada vez!", "A eficiência é a chave!",
+                    "Cada ponto conta!", "Futuro brilhante à vista!", "Estás a aquecer!",
+                    "Poder solar em ação!", "Excelente combinação!", "Mantém o ritmo!"
+                ]
+            },
+            { 
+                name: 'Breezy', color: 'blue', img: 'https://placehold.co/150x150/60a5fa/ffffff?text=B', 
+                messages: [
+                    "Sente a força do vento!", "Uma brisa de vitória!", "Leve como o ar!",
+                    "A energia eólica não para!", "Impressionante!", "Voando alto!",
+                    "Rajada de pontos!", "Que ventania de combinações!", "Não há quem te pare!"
+                ]
+            },
+            { 
+                name: 'Splashy', color: 'indigo', img: 'https://placehold.co/150x150/4f46e5/ffffff?text=S', 
+                messages: [
+                    "Um mar de pontos!", "A fluir para a vitória!", "Puro como a água!",
+                    "Força hídrica!", "Onda de sucesso!", "Estás a mergulhar fundo!",
+                    "Cascata de combinações!", "Imparável!", "Que corrente de sorte!"
+                ]
+            },
+        ];
+        
+        const VILLAINS = [
+            { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
+            { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S', message: "O meu fumo vai-te deixar a tossir!" },
+            { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G', message: "Não vais conseguir aguentar este cheiro a derrota!" },
+        ];
+        
+        const worldCharacters = [
+            HEROES[0], HEROES[1], HEROES[2],
+            VILLAINS[0], VILLAINS[1], VILLAINS[2]
+        ];
+
+        const SUPER_ICON_MESSAGES = {
+            'striped-h': "Linha de Energia Horizontal!",
+            'striped-v': "Rajada de Energia Vertical!",
+            'wrapped': "Explosão de Eficiência!",
+            'color-bomb': "Poder Cromático!",
+            'reshuffle': "Sem mais movimentos... A baralhar!",
+            'striped-striped': "Cruzamento de Energia!",
+            'striped-wrapped': "Mega Explosão!",
+            'wrapped-wrapped': "Gigante Explosão de Eficiência!",
+            'color-bomb-combo': "Cascata de Super Energia!",
+            'color-bomb-clear': "Limpeza Total de Energia!"
+        };
+        const SUPER_COMBO_BONUS = 2000;
+        const COLOR_BOMB_BONUS = 1000;
+
+        const ICONS = [
+            // Heróis
+            `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="#fde047"/><path d="M50 10 V 0 M50 90 V 100 M10 50 H 0 M90 50 H 100 M25 25 L 18 18 M75 75 L 82 82 M25 75 L 18 82 M75 25 L 82 18" stroke="#facc15" stroke-width="8" stroke-linecap="round"/></svg>`, // 0: Sol (Sunny)
+            `<svg viewBox="0 0 100 100"><path d="M50,95 L 50,55" stroke="#a0aec0" stroke-width="6" stroke-linecap="round"/><g transform="translate(50,50) rotate(0)"><path d="M0,0 C 20,-5 35,-20 40,-40 L 0,0 Z" fill="#e2e8f0"/></g><g transform="translate(50,50) rotate(120)"><path d="M0,0 C 20,-5 35,-20 40,-40 L 0,0 Z" fill="#e2e8f0"/></g><g transform="translate(50,50) rotate(240)"><path d="M0,0 C 20,-5 35,-20 40,-40 L 0,0 Z" fill="#e2e8f0"/></g><circle cx="50" cy="50" r="8" fill="#60a5fa"/></svg>`, // 1: Vento (Breezy)
+            `<svg viewBox="0 0 100 100"><path d="M50 10 C 20 40, 20 70, 50 90 C 80 70, 80 40, 50 10 Z" fill="#67e8f9"/></svg>`, // 2: Gota (Splashy)
+            // Vilões
+            `<svg viewBox="0 0 100 100"><path d="M50 10 C 20 40, 20 70, 50 90 C 80 70, 80 40, 50 10 Z" fill="#a3e635"/></svg>`, // 3: Gota de Petróleo (Oily)
+            `<svg viewBox="0 0 100 100"><polygon points="20,40 30,20 60,20 80,45 75,70 50,85 25,75" fill="#262626"/><polygon points="30,20 50,35 60,20" fill="#404040"/><polygon points="20,40 40,50 25,75" fill="#404040"/><polygon points="80,45 65,55 75,70" fill="#404040"/></svg>`, // 4: Carvão (Smokey)
+            `<svg viewBox="0 0 100 100"><path d="M50 90 C 70 90, 80 70, 80 50 C 80 30, 60 10, 50 10 C 40 10, 20 30, 20 50 C 20 70, 30 90, 50 90 Z" fill="#ef4444"/><path d="M50 80 C 60 80, 70 65, 70 50 C 70 35, 60 20, 50 20 C 40 20, 30 35, 30 50 C 30 65, 40 80, 50 80 Z" fill="#f87171"/></svg>`, // 5: Chama de Gás (Gassy)
+            // Ícone da Bomba de Cor
+            `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#1f2937"/><circle cx="50" cy="50" r="30" fill="url(#grad)"/><defs><radialGradient id="grad"><stop offset="0%" stop-color="#f472b6"/><stop offset="25%" stop-color="#60a5fa"/><stop offset="50%" stop-color="#facc15"/><stop offset="75%" stop-color="#4ade80"/><stop offset="100%" stop-color="#f472b6"/></radialGradient></defs></svg>`
+        ];
+        const ICON_NAMES = ["Energia Solar", "Energia Eólica", "Energia Hídrica", "Petróleo", "Carvão", "Gás Natural"];
+
+        const COLOR_BOMB_TYPE = ICONS.length - 1;
+
+        const LEVELS = Array.from({ length: 60 }, (_, i) => {
+            const level = i + 1;
+            const worldIndex = Math.floor(i / 10);
+            const character = worldCharacters[worldIndex];
+            const isBossLevel = (level % 10 === 0);
+            const isTimedLevel = (level % 10 === 5);
+            let rows, cols;
+            if (level < 10) { rows = 7; cols = 7; } else if (level < 20) { rows = 8; cols = 7; } else if (level < 30) { rows = 8; cols = 8; } else if (level < 40) { rows = 9; cols = 8; } else if (level < 50) { rows = 9; cols = 9; } else { rows = 10; cols = 9; }
+            
+            const rawScore = 1500 + Math.floor(Math.pow(i, 1.3) * 100);
+            const targetScore = Math.round(rawScore / 250) * 250;
+            const moves = Math.max(15, 35 - Math.floor(i / 2.5));
+
+            const config = { 
+                level, 
+                rows, 
+                cols, 
+                targetScore: targetScore, 
+                moves: moves, 
+                character: character, 
+                isBoss: isBossLevel, 
+            };
+
+            if (isTimedLevel) {
+                config.time = 90;
+                delete config.moves;
+            }
+            if (isBossLevel) {
+                config.time = 60;
+                config.autoReshuffle = 10000; // 10 segundos
+                delete config.moves;
+            }
+
+            return config;
+        });
+
+        // --- ESTADO DO JOGO ---
+        let gameState = {
+            currentLevel: 0,
+            score: 0,
+            totalScore: 0,
+            moves: 0,
+            timer: null,
+            timerInterval: null,
+            autoReshuffleInterval: null,
+            board: [],
+            isLocked: true,
+            selectedElement: null,
+            hintTimer: null,
+            lives: 5,
+            highestLevel: 0,
+            livesOutTimestamp: null,
+            socialClaims: {
+                tiktok: false,
+                instagram: false,
+                youtube: false
+            }
+        };
+        
+        // --- SONS DO JOGO ---
+        const sounds = {
+            swap: new Tone.FMSynth({ harmonicity: 8, modulationIndex: 2, envelope: { attack: 0.01, decay: 0.2, release: 0.2 }, modulationEnvelope: { attack: 0.01, decay: 0.1, release: 0.1 } }).toDestination(),
+            match: new Tone.PluckSynth({ attackNoise: 0.5, dampening: 4000, resonance: 0.9 }).toDestination(),
+            super: new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 10, envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 } }).toDestination(),
+            win: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth" }, envelope: { attack: 0.05, decay: 0.2, sustain: 0.3, release: 0.5 } }).toDestination(),
+            lose: new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'fmsquare', modulationType: 'sawtooth', modulationIndex: 3, harmonicity: 3.4 }, envelope: { attack: 0.05, decay: 0.4, sustain: 0.1, release: 1 } }).toDestination(),
+            bonus: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination()
+        };
+        
+        // --- FUNÇÕES PRINCIPAIS DO JOGO ---
+
+        function init() {
+            // Verifica se há um utilizador logado na sessão atual
+            const loggedInUserEmail = sessionStorage.getItem('eiaCrushCurrentUser');
+            if (loggedInUserEmail) {
+                currentUser = { email: loggedInUserEmail, name: localStorage.getItem('eiaCrushCurrentUserName') };
+                loadGameData(currentUser.email);
+            } else {
+                currentUser = null;
+                resetLocalGameState();
+            }
+            renderMainMenu(currentUser);
+            
+            // Listeners dos modais do jogo
+            document.getElementById('start-game-btn').addEventListener('click', async () => { document.getElementById('level-start-modal').style.display = 'none'; await startGame(); });
+            document.getElementById('next-level-btn').addEventListener('click', () => { document.getElementById('level-complete-modal').style.display = 'none'; renderWorldMap(Math.floor(gameState.currentLevel / 10)); });
+            document.getElementById('start-bonus-btn').addEventListener('click', async () => { document.getElementById('bonus-level-modal').style.display = 'none'; await startGame(); });
+            document.getElementById('close-help-btn').addEventListener('click', () => { document.getElementById('help-modal').style.display = 'none'; });
+            document.getElementById('close-world-help-btn').addEventListener('click', () => { document.getElementById('world-help-modal').style.display = 'none'; });
+            document.getElementById('submit-unlock-btn').addEventListener('click', handleUnlockCode);
+            document.getElementById('cancel-unlock-btn').addEventListener('click', () => {
+                document.getElementById('unlock-modal').style.display = 'none';
+                document.getElementById('unlock-feedback').textContent = '';
+                document.getElementById('unlock-code-input').value = '';
+            });
+            // Listeners dos modais de autenticação
+            document.getElementById('submit-login-btn').addEventListener('click', () => handleLogin());
+            document.getElementById('cancel-login-btn').addEventListener('click', () => { document.getElementById('login-modal').style.display = 'none'; });
+            document.getElementById('submit-register-btn').addEventListener('click', () => handleRegister());
+            document.getElementById('cancel-register-btn').addEventListener('click', () => { document.getElementById('register-modal').style.display = 'none'; });
+            // Listener para fechar o Hall of Fame
+            document.getElementById('close-hof-btn').addEventListener('click', () => { document.getElementById('hall-of-fame-modal').style.display = 'none'; });
+        }
+
+        function prepareLevel() {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const character = levelConfig.character;
+            const modalId = 'level-start-modal';
+            const modal = document.getElementById(modalId);
+            const extraInfoEl = modal.querySelector('#start-modal-extra-info');
+
+            modal.querySelector('#start-char-img').src = character.img;
+            modal.querySelector('#start-level').textContent = levelConfig.level;
+            modal.querySelector('#start-target').textContent = levelConfig.targetScore;
+            
+            let extraText = '';
+            if (levelConfig.time) {
+                extraText += `<span class="font-bold text-red-400">Tempo: ${levelConfig.time}s</span>`;
+            } else {
+                extraText += `<span>Jogadas: ${levelConfig.moves}</span>`;
+            }
+            if (levelConfig.autoReshuffle) {
+                extraText += `<br><span class="font-bold text-yellow-400">Baralha a cada 10s!</span>`;
+            }
+            extraInfoEl.innerHTML = extraText;
+            
+            modal.style.display = 'flex';
+        }
+
+        async function startGame() {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            gameState.score = 0;
+            gameState.moves = levelConfig.moves || 0;
+            gameState.timer = levelConfig.time || null;
+            clearInterval(gameState.timerInterval);
+            clearTimeout(gameState.autoReshuffleInterval);
+
+            if (levelConfig.time) {
+                gameState.timerInterval = setInterval(countdown, 1000);
+            }
+            if (levelConfig.autoReshuffle) {
+                autoReshuffleLoop();
+            }
+
+            gameState.isLocked = true;
+            gameState.selectedElement = null;
+            updateUI();
+            await createBoard();
+            resetHintTimer();
+        }
+        
+        function autoReshuffleLoop() {
+            gameState.autoReshuffleInterval = setTimeout(async () => {
+                if (!gameState.isLocked) {
+                    await reshuffleBoard(false, true);
+                }
+                autoReshuffleLoop();
+            }, LEVELS[gameState.currentLevel].autoReshuffle);
+        }
+
+        function countdown() {
+            gameState.timer--;
+            updateUI();
+            if (gameState.timer <= 0) {
+                levelLose("Ficaste sem tempo!");
+            }
+        }
+
+        function updateUI() {
+            if (menuLivesDisplay) menuLivesDisplay.textContent = gameState.lives;
+            if(menuTotalScoreDisplay) menuTotalScoreDisplay.textContent = gameState.totalScore;
+            if(mapTotalScoreDisplay) mapTotalScoreDisplay.textContent = gameState.totalScore;
+            if(gameTotalScoreDisplay) gameTotalScoreDisplay.textContent = gameState.totalScore;
+            
+            if (gameBoard) {
+                const levelConfig = LEVELS[gameState.currentLevel];
+                const character = levelConfig.character;
+                
+                scoreDisplay.textContent = gameState.score;
+                levelDisplay.textContent = levelConfig.level;
+                characterNameDisplay.textContent = character.name;
+                targetScoreDisplay.textContent = levelConfig.targetScore;
+                gameLivesDisplay.textContent = gameState.lives;
+
+                const movesOrTimeWrapper = document.getElementById('moves-or-time-display');
+                if (levelConfig.time !== undefined) {
+                    movesOrTimeWrapper.innerHTML = `
+                        <div class="text-sm opacity-80">Tempo</div>
+                        <div id="game-timer-display" class="text-2xl font-bold">${gameState.timer}</div>
+                    `;
+                    const timerDisplay = document.getElementById('game-timer-display');
+                    if (gameState.timer <= 10) {
+                        timerDisplay.classList.add('low-time');
+                    } else {
+                        timerDisplay.classList.remove('low-time');
+                    }
+                } else {
+                    movesOrTimeWrapper.innerHTML = `
+                        <div class="text-sm opacity-80">Jogadas</div>
+                        <div id="game-moves-display" class="text-2xl font-bold">${gameState.moves}</div>
+                    `;
+                    movesDisplay = document.getElementById('game-moves-display');
+                    if (gameState.moves <= 5) {
+                        movesDisplay.classList.add('low-moves');
+                    } else {
+                        movesDisplay.classList.remove('low-moves');
+                    }
+                }
+                
+                const gameContainer = document.getElementById('game-container');
+                const colorMap = { yellow: '#f59e0b', blue: '#3b82f6', indigo: '#4f46e5', gray: '#4b5563', orange: '#f97316', lime: '#84cc16' };
+                if (gameContainer) {
+                    gameContainer.style.background = `radial-gradient(circle, ${colorMap[character.color]} 0%, #111827 100%)`;
+                }
+            }
+        }
+
+        async function createBoard() {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const { rows, cols } = levelConfig;
+            gameState.board = [];
+            gameBoard.innerHTML = '';
+            gameBoard.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            gameBoard.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            
+            let attempts = 0;
+            do {
+                gameState.board = [];
+                for (let r = 0; r < rows; r++) {
+                    const row = []; 
+                    for (let c = 0; c < cols; c++) {
+                        let type;
+                        do {
+                            type = Math.floor(Math.random() * (ICONS.length - 1));
+                        } while (
+                            (c >= 2 && type === row[c - 1]?.type && type === row[c - 2]?.type) ||
+                            (r >= 2 && type === gameState.board[r - 1]?.[c]?.type && type === gameState.board[r - 2]?.[c]?.type)
+                        );
+                        row.push({ type, superType: null });
+                    }
+                    gameState.board.push(row);
+                }
+                attempts++;
+            } while ((findMatches().size > 0 || !checkForPossibleMoves()) && attempts < 20);
+            
+            renderBoard();
+            gameState.isLocked = false;
+        }
+
+        function renderBoard() {
+            gameBoard.innerHTML = '';
+            gameState.board.forEach((row, r) => {
+                row.forEach((gemData, c) => {
+                    if (gemData) {
+                        const gem = document.createElement('div');
+                        gem.classList.add('gem');
+                        gem.dataset.r = r;
+                        gem.dataset.c = c;
+                        gem.innerHTML = ICONS[gemData.type];
+                        if (gemData.superType) {
+                            gem.classList.add(`super-${gemData.superType}`);
+                        }
+                        gem.addEventListener('click', gemClick);
+                        gameBoard.appendChild(gem);
+                    }
+                });
+            });
+        }
+
+        // --- LÓGICA DE MOVIMENTO (CLIQUE) ---
+        
+        async function gemClick(e) {
+            if (gameState.isLocked) return;
+            resetHintTimer();
+            const clickedGem = e.target.closest('.gem');
+            if (!clickedGem) return;
+
+            if (gameState.selectedElement) {
+                const r1 = parseInt(gameState.selectedElement.dataset.r);
+                const c1 = parseInt(gameState.selectedElement.dataset.c);
+                const r2 = parseInt(clickedGem.dataset.r);
+                const c2 = parseInt(clickedGem.dataset.c);
+
+                gameState.selectedElement.classList.remove('is-selected');
+
+                if (gameState.selectedElement === clickedGem) {
+                    gameState.selectedElement = null;
+                    return;
+                }
+
+                const isAdjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+                if (isAdjacent) {
+                    await swap(r1, c1, r2, c2);
+                    gameState.selectedElement = null;
+                } else {
+                    gameState.selectedElement = clickedGem;
+                    clickedGem.classList.add('is-selected');
+                    sounds.swap.triggerAttackRelease('C5', '16n');
+                }
+            } else {
+                gameState.selectedElement = clickedGem;
+                clickedGem.classList.add('is-selected');
+                sounds.swap.triggerAttackRelease('C5', '16n');
+            }
+        }
+        
+        async function swap(r1, c1, r2, c2, isUndo = false) {
+            if (gameState.isLocked && !isUndo) return;
+            gameState.isLocked = true;
+            
+            try {
+                const gem1 = gameState.board[r1][c1];
+                const gem2 = gameState.board[r2][c2];
+
+                // Prioridade 1: Dois Super Ícones
+                if (!isUndo && gem1?.superType && gem2?.superType) {
+                    if (LEVELS[gameState.currentLevel].moves !== undefined) gameState.moves--;
+                    updateUI();
+                    await handleSuperSuperSwap(r1, c1, r2, c2);
+                    return; // Termina a função aqui
+                }
+
+                // Prioridade 2: Um dos ícones é Bomba de Cor (e o outro não é super)
+                if (!isUndo && (gem1?.superType === 'color-bomb' || gem2?.superType === 'color-bomb')) {
+                    if (LEVELS[gameState.currentLevel].moves !== undefined) gameState.moves--;
+                    updateUI();
+                    await handleColorBombSwap(r1, c1, r2, c2);
+                    return; // Termina a função aqui
+                }
+
+                // Lógica normal de troca
+                if (!isUndo && LEVELS[gameState.currentLevel].moves !== undefined) {
+                    gameState.moves--;
+                    updateUI();
+                }
+                
+                gameState.board[r1][c1] = gem2;
+                gameState.board[r2][c2] = gem1;
+                
+                if (!isUndo) sounds.swap.triggerAttackRelease('G5', '8n');
+                renderBoard();
+                await delay(300);
+
+                const matches = findMatches();
+                if (matches.size > 0) {
+                    await handleMatches(matches, {r: r2, c: c2});
+                } else if (!isUndo) {
+                     if (LEVELS[gameState.currentLevel].moves !== undefined) gameState.moves++; 
+                    updateUI();
+                    await swap(r1, c1, r2, c2, true);
+                }
+            } finally {
+                 if (!isUndo) {
+                    gameState.isLocked = false;
+                    checkGameEnd();
+                    resetHintTimer();
+                } else {
+                    gameState.isLocked = false;
+                }
+            }
+        }
+
+        // --- LÓGICA DE COMBINAÇÕES E CASCATAS ---
+
+        function findMatches() {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const { rows, cols } = levelConfig;
+            const matches = new Set();
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols - 2; c++) {
+                    const gem1 = gameState.board[r][c];
+                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE) continue;
+                    const gem2 = gameState.board[r][c + 1];
+                    const gem3 = gameState.board[r][c + 2];
+                    if (gem2 && gem3 && gem1.type === gem2.type && gem2.type === gem3.type) {
+                        let i = c;
+                        while(i < cols && gameState.board[r][i]?.type === gem1.type) {
+                            matches.add(`${r}-${i}`);
+                            i++;
+                        }
+                    }
+                }
+            }
+            for (let c = 0; c < cols; c++) {
+                for (let r = 0; r < rows - 2; r++) {
+                    const gem1 = gameState.board[r][c];
+                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE) continue;
+                    const gem2 = gameState.board[r + 1][c];
+                    const gem3 = gameState.board[r + 2][c];
+                     if (gem2 && gem3 && gem1.type === gem2.type && gem2.type === gem3.type) {
+                        let i = r;
+                        while(i < rows && gameState.board[i][c]?.type === gem1.type) {
+                            matches.add(`${i}-${c}`);
+                            i++;
+                        }
+                    }
+                }
+            }
+            return matches;
+        }
+        
+        async function handleMatches(initialMatches, swapPosition, bonusPoints = 0) {
+            gameState.isLocked = true;
+            let chain = 1;
+            let explosionQueue = new Set(initialMatches);
+            let totalBonus = bonusPoints;
+            let pointsThisTurn = 0;
+
+            while (explosionQueue.size > 0) {
+                const currentExplosions = new Set(explosionQueue);
+                explosionQueue.clear();
+
+                await activateSuperIcons(currentExplosions);
+
+                const { newSuperIcons, allMatchedGems } = createSuperIcons(findMatches(), swapPosition);
+                allMatchedGems.forEach(gem => currentExplosions.add(gem));
+
+                const pointsFromExplosion = await explodeGems(currentExplosions, chain, totalBonus);
+                pointsThisTurn += pointsFromExplosion;
+                totalBonus = 0;
+                
+                newSuperIcons.forEach(superIcon => {
+                    gameState.board[superIcon.r][superIcon.c] = { type: superIcon.type, superType: superIcon.superType };
+                });
+
+                await processBoardAfterExplosion();
+                
+                const newMatches = findMatches();
+                newMatches.forEach(match => explosionQueue.add(match));
+                if (newMatches.size > 0) chain++;
+            }
+            
+            if (pointsThisTurn > 200) {
+                const levelConfig = LEVELS[gameState.currentLevel];
+                if (levelConfig.time !== undefined) {
+                    if (pointsThisTurn >= 500) {
+                        gameState.timer += 10;
+                        showBonusPopup("+10 Segundos!");
+                    } else {
+                        gameState.timer += 5;
+                        showBonusPopup("+5 Segundos!");
+                    }
+                    updateUI();
+                } else if (levelConfig.moves !== undefined) {
+                    gameState.moves += 5;
+                    showBonusPopup("+5 Jogadas!");
+                    updateUI();
+                }
+            }
+
+            if (!checkForPossibleMoves()) {
+                await reshuffleBoard();
+            }
+
+            gameState.isLocked = false;
+            resetHintTimer();
+        }
+
+        async function processBoardAfterExplosion() {
+            await delay(200);
+            await dropGems();
+            await fillGems();
+            renderBoard();
+            await delay(300);
+        }
+
+        function analyzeMatchShape(coordsSet) {
+            const coords = Array.from(coordsSet).map(c => c.split('-').map(Number));
+            const rows = [...new Set(coords.map(c => c[0]))];
+            const cols = [...new Set(coords.map(c => c[1]))];
+            if (coords.length >= 5) {
+                if (rows.length === 1 || cols.length === 1) return { shape: 'line-5', orientation: rows.length === 1 ? 'horizontal' : 'vertical' };
+                return { shape: 'L/T' };
+            }
+            if (coords.length === 4) {
+                if (rows.length === 1 || cols.length === 1) return { shape: 'line-4', orientation: rows.length === 1 ? 'horizontal' : 'vertical' };
+            }
+            return { shape: 'line-3' };
+        }
+        
+        function createSuperIcons(allMatches, swapPosition) {
+            const newSuperIcons = [];
+            const allMatchedGems = new Set();
+            const groupedMatches = groupMatches(allMatches);
+
+            groupedMatches.forEach(matchGroup => {
+                const { shape, orientation } = analyzeMatchShape(matchGroup);
+                let superType = null;
+                if (shape === 'line-5') superType = 'color-bomb';
+                else if (shape === 'L/T') superType = 'wrapped';
+                else if (shape === 'line-4') superType = orientation === 'horizontal' ? 'striped-v' : 'striped-h';
+                
+                if (superType) {
+                    let [r, c] = matchGroup.values().next().value.split('-').map(Number);
+                    if (swapPosition && matchGroup.has(`${swapPosition.r}-${swapPosition.c}`)) {
+                        r = swapPosition.r; c = swapPosition.c;
+                    }
+                    const gemData = gameState.board[r]?.[c];
+                    if (gemData) {
+                       const type = superType === 'color-bomb' ? COLOR_BOMB_TYPE : gemData.type;
+                       newSuperIcons.push({ r, c, type, superType });
+                       matchGroup.forEach(coord => allMatchedGems.add(coord));
+                       allMatchedGems.delete(`${r}-${c}`);
+                    }
+                } else {
+                    matchGroup.forEach(coord => allMatchedGems.add(coord));
+                }
+            });
+
+            return { newSuperIcons, allMatchedGems };
+        }
+
+        function groupMatches(matchSet) {
+            const groups = [];
+            const visited = new Set();
+            for (const coord of matchSet) {
+                if (visited.has(coord)) continue;
+                const group = new Set();
+                const queue = [coord];
+                visited.add(coord);
+                const [startR, startC] = coord.split('-').map(Number);
+                const gemType = gameState.board[startR]?.[startC]?.type;
+                if (gemType === undefined) continue;
+
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    group.add(current);
+                    const [r, c] = current.split('-').map(Number);
+                    
+                    [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr, nc]) => {
+                        const nextCoord = `${nr}-${nc}`;
+                        if (matchSet.has(nextCoord) && !visited.has(nextCoord) && gameState.board[nr]?.[nc]?.type === gemType) {
+                            visited.add(nextCoord);
+                            queue.push(nextCoord);
+                        }
+                    });
+                }
+                groups.push(group);
+            }
+            return groups;
+        }
+
+        async function activateSuperIcons(explosionSet) {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const iconsToActivate = [...explosionSet];
+            let activatedAny = false;
+            for (const coord of iconsToActivate) {
+                const [r, c] = coord.split('-').map(Number);
+                const gemData = gameState.board[r]?.[c];
+                if (gemData?.superType) {
+                    activatedAny = true;
+                    showSuperIconPopup(gemData.superType);
+                    switch (gemData.superType) {
+                        case 'striped-h': for (let i = 0; i < levelConfig.cols; i++) explosionSet.add(`${r}-${i}`); break;
+                        case 'striped-v': for (let i = 0; i < levelConfig.rows; i++) explosionSet.add(`${i}-${c}`); break;
+                        case 'wrapped':
+                            for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+                                if (r + dr >= 0 && r + dr < levelConfig.rows && c + dc >= 0 && c + dc < levelConfig.cols) explosionSet.add(`${r+dr}-${c+dc}`);
+                            }
+                            break;
+                    }
+                    gemData.superType = null; 
+                }
+            }
+            if (activatedAny) {
+                sounds.super.triggerAttackRelease('C3', '8n');
+            }
+        }
+
+        async function handleSuperSuperSwap(r1, c1, r2, c2) {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const explosionSet = new Set();
+            const gem1 = gameState.board[r1][c1];
+            const gem2 = gameState.board[r2][c2];
+            
+            if (!gem1 || !gem2) {
+                console.error("Tentativa de combinar super ícones inexistentes.");
+                return;
+            }
+
+            const types = [gem1.superType, gem2.superType].sort();
+
+            // Limpa os ícones originais do tabuleiro imediatamente
+            gameState.board[r1][c1] = null;
+            gameState.board[r2][c2] = null;
+            explosionSet.add(`${r1}-${c1}`);
+            explosionSet.add(`${r2}-${c2}`);
+
+            // Caso 1: Bomba de Cor + Bomba de Cor
+            if (types[0] === 'color-bomb' && types[1] === 'color-bomb') {
+                showSuperIconPopup('color-bomb-clear');
+                for (let r = 0; r < levelConfig.rows; r++) {
+                    for (let c = 0; c < levelConfig.cols; c++) {
+                        if (gameState.board[r][c] !== null) {
+                           explosionSet.add(`${r}-${c}`);
+                        }
+                    }
+                }
+            }
+            // Caso 2: Bomba de Cor + Outro Super Ícone
+            else if (types[0] === 'color-bomb') {
+                showSuperIconPopup('color-bomb-combo');
+                const otherGem = gem1.superType === 'color-bomb' ? gem2 : gem1;
+                const otherSuperType = otherGem.superType;
+                const typeToTransform = otherGem.type;
+
+                gameState.board.forEach((row, r) => {
+                    row.forEach((gem, c) => {
+                        if (gem?.type === typeToTransform) {
+                            gem.superType = otherSuperType;
+                            explosionSet.add(`${r}-${c}`);
+                        }
+                    });
+                });
+            }
+            // Caso 3: Embrulhada + Embrulhada
+            else if (types[0] === 'wrapped' && types[1] === 'wrapped') {
+                showSuperIconPopup('wrapped-wrapped');
+                // Explosão 5x5 centrada no destino da jogada (r2, c2)
+                for (let dr = -2; dr <= 2; dr++) {
+                    for (let dc = -2; dc <= 2; dc++) {
+                        const nr = r2 + dr;
+                        const nc = c2 + dc;
+                        if (nr >= 0 && nr < levelConfig.rows && nc >= 0 && nc < levelConfig.cols) {
+                            explosionSet.add(`${nr}-${nc}`);
+                        }
+                    }
+                }
+            }
+            // Caso 4: Listada + Embrulhada
+            else if (types[0].startsWith('striped') && types[1] === 'wrapped') {
+                showSuperIconPopup('striped-wrapped');
+                // 3 linhas e 3 colunas centradas no destino (r2,c2)
+                for (let i = -1; i <= 1; i++) {
+                    const rowToClear = r2 + i;
+                    if (rowToClear >= 0 && rowToClear < levelConfig.rows) {
+                        for (let c = 0; c < levelConfig.cols; c++) explosionSet.add(`${rowToClear}-${c}`);
+                    }
+                    const colToClear = c2 + i;
+                    if (colToClear >= 0 && colToClear < levelConfig.cols) {
+                        for (let r = 0; r < levelConfig.rows; r++) explosionSet.add(`${r}-${colToClear}`);
+                    }
+                }
+            }
+            // Caso 5: Listada + Listada
+            else if (types[0].startsWith('striped') && types[1].startsWith('striped')) {
+                showSuperIconPopup('striped-striped');
+                // 1 linha e 1 coluna a partir do ponto de destino
+                for (let i = 0; i < levelConfig.cols; i++) explosionSet.add(`${r2}-${i}`);
+                for (let i = 0; i < levelConfig.rows; i++) explosionSet.add(`${i}-${c2}`);
+            }
+
+            await handleMatches(explosionSet, null, SUPER_COMBO_BONUS);
+        }
+
+        async function handleColorBombSwap(r1, c1, r2, c2) {
+            // Esta função trata APENAS de trocas de Bomba de Cor + peça REGULAR.
+            const bombCoord = gameState.board[r1][c1]?.superType === 'color-bomb' ? {r:r1, c:c1} : {r:r2, c:c2};
+            const targetGem = gameState.board[r1][c1]?.superType !== 'color-bomb' ? gameState.board[r1][c1] : gameState.board[r2][c2];
+            
+            const explosionSet = new Set();
+            
+            showSuperIconPopup('color-bomb');
+            if (targetGem) { // targetGem será uma peça regular
+                const typeToClear = targetGem.type;
+                gameState.board.forEach((row, r) => row.forEach((gem, c) => {
+                    if (gem?.type === typeToClear) explosionSet.add(`${r}-${c}`);
+                }));
+            }
+            
+            // Adiciona a bomba e a peça alvo à explosão para serem removidas
+            explosionSet.add(`${r1}-${c1}`);
+            explosionSet.add(`${r2}-${c2}`);
+            gameState.board[r1][c1] = null;
+            gameState.board[r2][c2] = null;
+
+            await handleMatches(explosionSet, null, COLOR_BOMB_BONUS);
+        }
+
+        async function explodeGems(matches, chain, bonus = 0) {
+            if (matches.size === 0) return 0;
+            const points = (matches.size * 10 * chain) + bonus;
+            
+            const coords = Array.from(matches).map(c => c.split('-').map(Number));
+            const avgR = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
+            const avgC = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
+            
+            showPointsAnimation(points, avgR, avgC, bonus > 0);
+            await animateScore(gameState.score + points);
+            
+            const pitch = Tone.Frequency("C4").transpose(chain - 1);
+            sounds.match.triggerAttackRelease(pitch, '8n');
+            for (const coord of matches) {
+                const [r, c] = coord.split('-').map(Number);
+                const gemElement = document.querySelector(`.gem[data-r='${r}'][data-c='${c}']`);
+                if (gemElement) gemElement.classList.add('is-exploding');
+                if (gameState.board[r]) gameState.board[r][c] = null;
+            }
+            await delay(500);
+            return points;
+        }
+
+        async function dropGems() {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            for (let c = 0; c < levelConfig.cols; c++) {
+                let emptyRow = null;
+                for (let r = levelConfig.rows - 1; r >= 0; r--) {
+                    if (gameState.board[r][c] === null && emptyRow === null) emptyRow = r;
+                    else if (gameState.board[r][c] !== null && emptyRow !== null) {
+                        gameState.board[emptyRow][c] = gameState.board[r][c];
+                        gameState.board[r][c] = null;
+                        emptyRow--;
+                    }
+                }
+            }
+        }
+
+        async function fillGems() {
+            gameState.board.forEach(row => {
+                for (let c = 0; c < row.length; c++) {
+                    if (row[c] === null) row[c] = { type: Math.floor(Math.random() * (ICONS.length - 1)), superType: null };
+                }
+            });
+        }
+        
+        function showSuperIconPopup(superType) {
+            const popup = document.getElementById('super-icon-popup');
+            popup.textContent = SUPER_ICON_MESSAGES[superType];
+            popup.style.display = 'block';
+            setTimeout(() => { popup.style.display = 'none'; }, 2000);
+        }
+
+        function showBonusPopup(message) {
+            const popup = document.getElementById('bonus-popup');
+            popup.textContent = message;
+            popup.style.display = 'block';
+            setTimeout(() => { popup.style.display = 'none'; }, 2000);
+        }
+        
+        function checkGameEnd() {
+            if (gameState.isLocked) return;
+            const levelConfig = LEVELS[gameState.currentLevel];
+            if (gameState.score >= levelConfig.targetScore) {
+                levelWin();
+            } else if (levelConfig.moves !== undefined && gameState.moves <= 0) {
+                levelLose("Ficaste sem jogadas!");
+            } else if (levelConfig.time !== undefined && gameState.timer <= 0) {
+                 // A função countdown já trata disto
+            }
+        }
+
+        async function levelWin() {
+            gameState.isLocked = true;
+            clearTimeout(gameState.hintTimer);
+            clearInterval(gameState.timerInterval);
+            clearTimeout(gameState.autoReshuffleInterval);
+
+            const now = Tone.now();
+            sounds.win.triggerAttackRelease(["C4", "E4", "G4", "C5"], "8n", now);
+            sounds.win.triggerAttackRelease(["E4", "G4", "C5", "E5"], "8n", now + 0.2);
+            sounds.win.triggerAttackRelease(["G4", "C5", "E5", "G5"], "8n", now + 0.4);
+
+            const modal = document.getElementById('level-complete-modal');
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const character = levelConfig.character;
+            
+            document.getElementById('level-score-display').textContent = gameState.score;
+            document.getElementById('final-score').textContent = gameState.score;
+            modal.querySelector('#complete-char-img').src = character.img;
+            
+            let message;
+            if (levelConfig.isBoss) {
+                message = character.message;
+            } else {
+                const messageIndex = (levelConfig.level - 1) % 10;
+                if(character.messages) {
+                    message = character.messages[messageIndex];
+                } else {
+                    message = `Mais um passo para derrotar ${character.name}!`;
+                }
+            }
+            modal.querySelector('#complete-char-message').textContent = message;
+            modal.style.display = 'flex';
+
+            await animateFinalScore();
+
+            const oldTotalScore = gameState.totalScore;
+            gameState.totalScore += gameState.score;
+            const oldMilestone = Math.floor(oldTotalScore / 10000);
+            const newMilestone = Math.floor(gameState.totalScore / 10000);
+
+            if (newMilestone > oldMilestone) {
+                gameState.lives++;
+                showBonusPopup("+1 Vida!");
+            }
+
+            if (gameState.currentLevel === gameState.highestLevel) {
+                gameState.highestLevel++;
+            }
+            if ((gameState.currentLevel + 1) % 10 === 0) {
+                gameState.lives++;
+            }
+            saveGameData();
+        }
+
+        async function animateFinalScore() {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const bonusValue = levelConfig.moves !== undefined ? gameState.moves : gameState.timer;
+            const bonusScoreDisplay = document.getElementById('bonus-score-display');
+            const finalScoreDisplay = document.getElementById('final-score');
+            let bonusPoints = 0;
+
+            if (bonusValue > 0) {
+                const delayTime = 75; // Atraso fixo de 75ms para uma contagem mais lenta e visível
+                for (let i = 0; i < bonusValue; i++) {
+                    bonusPoints += 10;
+                    gameState.score += 10;
+                    
+                    bonusScoreDisplay.textContent = bonusPoints;
+                    finalScoreDisplay.textContent = gameState.score;
+                    
+                    const pitch = Tone.Frequency("C5").transpose(i % 12);
+                    sounds.bonus.triggerAttackRelease(pitch, "32n");
+                    
+                    await delay(delayTime);
+                }
+            }
+        }
+
+        function levelLose(message = "Ficaste sem movimentos. Perdeste uma vida!") {
+            gameState.isLocked = true;
+            clearTimeout(gameState.hintTimer);
+            clearInterval(gameState.timerInterval);
+            clearTimeout(gameState.autoReshuffleInterval);
+
+            gameState.lives--;
+            if (gameState.lives <= 0 && !gameState.livesOutTimestamp) {
+                gameState.livesOutTimestamp = Date.now();
+            }
+            saveGameData();
+            updateUI();
+
+            const now = Tone.now();
+            sounds.lose.triggerAttackRelease("C4", "4n", now);
+            sounds.lose.triggerAttackRelease("A3", "4n", now + 0.1);
+            sounds.lose.triggerAttackRelease("F#3", "4n", now + 0.2);
+            sounds.lose.triggerAttackRelease("C3", "4n", now + 0.3);
+            
+            const modal = document.getElementById('game-over-modal');
+            const buttonsContainer = document.getElementById('game-over-buttons');
+            buttonsContainer.innerHTML = ''; // Limpar botões antigos
+            
+            document.getElementById('game-over-message').textContent = message;
+
+            if (gameState.lives > 0) {
+                const retryBtn = document.createElement('button');
+                retryBtn.id = 'retry-level-btn-lose';
+                retryBtn.className = 'bg-white text-red-600 font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105';
+                retryBtn.textContent = 'Tentar Novamente';
+                retryBtn.addEventListener('click', () => { document.getElementById('game-over-modal').style.display = 'none'; prepareLevel(); });
+                buttonsContainer.appendChild(retryBtn);
+            } else {
+                 document.getElementById('game-over-message').textContent = `Ficaste sem vidas! Ganha mais vidas ou espera 1 hora por cada vida nova (máx. 5).`;
+                const socialLinks = [
+                    { platform: 'tiktok', text: 'TikTok (+5 Vidas)', url: 'https://www.tiktok.com/@koelho2000' },
+                    { platform: 'instagram', text: 'Instagram (+5 Vidas)', url: 'https://www.instagram.com/eia_energyinaction/' },
+                    { platform: 'youtube', text: 'YouTube (+5 Vidas)', url: 'https://youtube.com/playlist?list=PLHHMjSyJQeBCFjuuPaqrhqMic374sFIkG&si=GimZ3c0V-wMgoMSo' }
+                ];
+
+                socialLinks.forEach(link => {
+                    const socialBtn = document.createElement('button');
+                    socialBtn.className = 'bg-white text-red-600 font-bold py-2 px-4 rounded-full text-lg transition-transform transform hover:scale-105';
+                    socialBtn.textContent = link.text;
+                    if (gameState.socialClaims[link.platform]) {
+                        socialBtn.disabled = true;
+                        socialBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+                    socialBtn.addEventListener('click', () => {
+                        window.open(link.url, '_blank');
+                        claimSocialLives(link.platform);
+                    });
+                    buttonsContainer.appendChild(socialBtn);
+                });
+
+                const backBtn = document.createElement('button');
+                backBtn.className = 'bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-full text-lg';
+                backBtn.textContent = 'Voltar ao Mapa';
+                backBtn.addEventListener('click', () => {
+                    document.getElementById('game-over-modal').style.display = 'none';
+                    renderWorldMap(Math.floor(gameState.highestLevel / 10));
+                });
+                buttonsContainer.appendChild(backBtn);
+            }
+            
+            setTimeout(() => modal.style.display = 'flex', 500);
+        }
+        
+        function claimSocialLives(platform) {
+            if (!gameState.socialClaims[platform]) {
+                gameState.lives += 5;
+                gameState.socialClaims[platform] = true;
+                saveGameData();
+                showBonusPopup("+5 Vidas!");
+                // Atualizar o modal de game over para permitir tentar novamente
+                levelLose("Ganhastes 5 vidas!");
+            }
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // --- LÓGICA DE VERIFICAÇÃO DE JOGADAS E DICAS ---
+        
+        function clearHints() {
+            document.querySelectorAll('.hint').forEach(el => el.classList.remove('hint'));
+        }
+
+        function resetHintTimer() {
+            clearTimeout(gameState.hintTimer);
+            clearHints();
+            if (!gameState.isLocked) {
+                gameState.hintTimer = setTimeout(showHint, 5000);
+            }
+        }
+
+        function showHint() {
+            const move = findPossibleMove();
+            if (move) {
+                move.forEach(pos => {
+                    const el = document.querySelector(`.gem[data-r='${pos.r}'][data-c='${pos.c}']`);
+                    if (el) el.classList.add('hint');
+                });
+            }
+        }
+
+        function findPossibleMove() {
+            const levelConfig = LEVELS[gameState.currentLevel];
+            for (let r = 0; r < levelConfig.rows; r++) {
+                for (let c = 0; c < levelConfig.cols; c++) {
+                    if (c < levelConfig.cols - 1 && wouldMatch(r, c, r, c + 1)) return [{r,c}, {r, c:c+1}];
+                    if (r < levelConfig.rows - 1 && wouldMatch(r, c, r + 1, c)) return [{r,c}, {r:r+1, c}];
+                }
+            }
+            return null;
+        }
+
+        function wouldMatch(r1, c1, r2, c2) {
+            if (!gameState.board[r1] || !gameState.board[r1][c1] || !gameState.board[r2] || !gameState.board[r2][c2]) return false;
+            
+            const boardCopy = gameState.board.map(row => row.map(gem => ({...gem})));
+
+            const temp = boardCopy[r1][c1];
+            boardCopy[r1][c1] = boardCopy[r2][c2];
+            boardCopy[r2][c2] = temp;
+            
+            const originalBoard = gameState.board;
+            gameState.board = boardCopy;
+            const hasMatch = findMatches().size > 0;
+            gameState.board = originalBoard;
+
+            return hasMatch;
+        }
+
+        function checkForPossibleMoves() {
+            return findPossibleMove() !== null;
+        }
+        
+        async function reshuffleBoard(isSilent = false, isAutomatic = false) {
+            gameState.isLocked = true;
+            if (isAutomatic) {
+                showBonusPopup("A BARALHAR!");
+                await delay(1000);
+            } else if (!isSilent) {
+                showSuperIconPopup("reshuffle");
+                await delay(2000);
+            }
+
+            const levelConfig = LEVELS[gameState.currentLevel];
+            let attempts = 0;
+            do {
+                // Pega todas as peças do tabuleiro e baralha-as
+                let flatBoard = gameState.board.flat().filter(Boolean);
+                for (let i = flatBoard.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [flatBoard[i], flatBoard[j]] = [flatBoard[j], flatBoard[i]];
+                }
+                
+                // Coloca as peças baralhadas de volta no tabuleiro
+                let flatIndex = 0;
+                for (let r = 0; r < levelConfig.rows; r++) {
+                    for (let c = 0; c < levelConfig.cols; c++) {
+                        gameState.board[r][c] = flatBoard[flatIndex++];
+                    }
+                }
+                attempts++;
+            } while ((findMatches().size > 0 || !checkForPossibleMoves()) && attempts < 20);
+            
+            renderBoard();
+            await delay(300);
+            const newMatches = findMatches();
+            if (newMatches.size > 0) {
+                await handleMatches(newMatches, null);
+            } else {
+                gameState.isLocked = false;
+                if (!isSilent) {
+                    resetHintTimer();
+                }
+            }
+        }
+
+        // --- DADOS DO JOGO (LocalStorage) ---
+        
+        // Função auxiliar para ler a base de dados local
+        function getLocalDatabase() {
+            const db = localStorage.getItem('eiaCrushDatabase');
+            return db ? JSON.parse(db) : { users: {} };
+        }
+
+        // Função auxiliar para escrever na base de dados local
+        function saveLocalDatabase(db) {
+            localStorage.setItem('eiaCrushDatabase', JSON.stringify(db));
+        }
+
+        function saveGameData() {
+            const userEmail = currentUser?.email;
+            if (userEmail) { // Utilizador registado
+                const db = getLocalDatabase();
+                if (!db.users[userEmail]) {
+                    db.users[userEmail] = {};
+                }
+                // Atualiza os dados de progresso do utilizador
+                db.users[userEmail].progress = {
+                    lives: gameState.lives,
+                    highestLevel: gameState.highestLevel,
+                    livesOutTimestamp: gameState.livesOutTimestamp,
+                    totalScore: gameState.totalScore,
+                    socialClaims: gameState.socialClaims
+                };
+                saveLocalDatabase(db);
+            } else { // Modo convidado
+                const guestData = {
+                    lives: gameState.lives,
+                    highestLevel: gameState.highestLevel,
+                    livesOutTimestamp: gameState.livesOutTimestamp,
+                    totalScore: gameState.totalScore,
+                    socialClaims: gameState.socialClaims
+                };
+                localStorage.setItem('eiaCrushGuestData', JSON.stringify(guestData));
+            }
+        }
+
+        function loadGameData(userEmail) {
+            const ONE_HOUR = 60 * 60 * 1000;
+            let data;
+            if (userEmail) { // Utilizador registado
+                const db = getLocalDatabase();
+                data = db.users[userEmail]?.progress;
+            } else { // Modo convidado
+                data = JSON.parse(localStorage.getItem('eiaCrushGuestData'));
+            }
+
+            if (data) {
+                gameState.highestLevel = data.highestLevel || 0;
+                gameState.totalScore = data.totalScore || 0;
+                gameState.lives = data.lives !== undefined ? data.lives : 5;
+                gameState.livesOutTimestamp = data.livesOutTimestamp || null;
+                gameState.socialClaims = data.socialClaims || { tiktok: false, instagram: false, youtube: false };
+
+                if (gameState.lives < 5 && gameState.livesOutTimestamp) {
+                    const timePassed = Date.now() - gameState.livesOutTimestamp;
+                    const livesGained = Math.floor(timePassed / ONE_HOUR);
+                    
+                    if (livesGained > 0) {
+                        gameState.lives = Math.min(5, gameState.lives + livesGained);
+                        if (gameState.lives >= 5) {
+                            gameState.livesOutTimestamp = null;
+                        } else {
+                             gameState.livesOutTimestamp += livesGained * ONE_HOUR;
+                        }
+                        saveGameData();
+                    }
+                }
+            } else {
+                resetLocalGameState();
+                saveGameData(); // Cria o registo inicial para o utilizador
+            }
+        }
+
+        function resetLocalGameState() {
+            gameState.currentLevel = 0;
+            gameState.score = 0;
+            gameState.totalScore = 0;
+            gameState.moves = 0;
+            gameState.timer = null;
+            gameState.board = [];
+            gameState.isLocked = true;
+            gameState.selectedElement = null;
+            gameState.hintTimer = null;
+            gameState.lives = 5;
+            gameState.highestLevel = 0;
+            gameState.livesOutTimestamp = null;
+            gameState.socialClaims = { tiktok: false, instagram: false, youtube: false };
+            localStorage.removeItem('eiaCrushGuestData');
+        }
+
+        // --- ANIMAÇÃO DE PONTOS ---
+        function showPointsAnimation(amount, r, c, isSpecial = false) {
+            const gameBoardContainer = document.getElementById('game-board-container');
+            if (!gameBoardContainer || !gameBoard.firstChild) return;
+
+            const gemSize = gameBoard.firstChild.offsetWidth;
+            const gap = 4; // as defined in CSS .game-board
+            const boardPadding = 8; // as defined in CSS .game-board
+            const containerPadding = 8; // p-2 in tailwind on game-board-container
+            const offset = boardPadding + containerPadding;
+
+            const pointPopup = document.createElement('div');
+            pointPopup.textContent = `+${amount}`;
+            pointPopup.className = 'point-popup';
+            if (isSpecial) {
+                pointPopup.classList.add('special');
+            }
+            // Calculate the position based on the grid, including gaps and paddings
+            pointPopup.style.top = `${offset + r * (gemSize + gap)}px`;
+            pointPopup.style.left = `${offset + c * (gemSize + gap)}px`;
+            
+            gameBoardContainer.appendChild(pointPopup);
+            setTimeout(() => pointPopup.remove(), 1000);
+        }
+        
+        async function animateScore(targetScore) {
+            const startScore = gameState.score;
+            gameState.score = targetScore;
+            const duration = 500;
+            let startTime = null;
+
+            function animationStep(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+                const currentDisplayScore = Math.floor(progress * (targetScore - startScore) + startScore);
+                if (scoreDisplay) scoreDisplay.textContent = currentDisplayScore;
+                if (progress < 1) {
+                    requestAnimationFrame(animationStep);
+                }
+            }
+            requestAnimationFrame(animationStep);
+        }
+        
+        // --- RENDERIZAÇÃO DE ECRÃS ---
+        function renderMainMenu(user) {
+            gameBoard = null;
+            mapTotalScoreDisplay = null;
+            gameTotalScoreDisplay = null;
+            const template = document.getElementById('main-menu-template');
+            appContainer.innerHTML = '';
+            appContainer.appendChild(template.content.cloneNode(true));
+
+            const authButtons = document.getElementById('auth-buttons');
+            const userInfo = document.getElementById('user-info');
+
+            if (user) {
+                authButtons.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                document.getElementById('username-display').textContent = user.name || user.email;
+                document.getElementById('play-map-btn').addEventListener('click', () => renderWorldMap(Math.floor(gameState.highestLevel / 10)));
+                menuLivesDisplay = document.getElementById('menu-lives-display');
+                menuTotalScoreDisplay = document.getElementById('menu-total-score-display');
+            } else {
+                authButtons.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+                document.getElementById('login-btn').addEventListener('click', () => { document.getElementById('login-modal').style.display = 'flex'; });
+                document.getElementById('register-btn').addEventListener('click', () => { document.getElementById('register-modal').style.display = 'flex'; });
+                document.getElementById('guest-play-btn').addEventListener('click', () => {
+                    loadGameData(null); // Carrega dados de convidado ou inicia um novo
+                    renderWorldMap(0);
+                });
+            }
+            // Lógica do botão Hall of Fame
+            document.getElementById('hall-of-fame-btn').addEventListener('click', showHallOfFame);
+            updateUI();
+        }
+
+        function renderWorldMap(worldIndex = 0) {
+            gameBoard = null;
+            menuTotalScoreDisplay = null;
+            gameTotalScoreDisplay = null;
+            const template = document.getElementById('world-map-template');
+            appContainer.innerHTML = '';
+            appContainer.appendChild(template.content.cloneNode(true));
+            mapTotalScoreDisplay = document.getElementById('map-total-score-display');
+            const worldTabsContainer = document.getElementById('world-tabs');
+            const levelGrid = document.getElementById('level-grid');
+            const backBtn = document.getElementById('back-to-main-menu-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            backBtn.addEventListener('click', () => renderMainMenu(currentUser));
+
+            if (currentUser) {
+                logoutBtn.classList.remove('hidden');
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+
+            worldCharacters.forEach((character, index) => {
+                const tab = document.createElement('button');
+                tab.textContent = `Mundo ${index + 1} - ${character.name}`;
+                tab.className = 'world-tab px-4 py-2 rounded-lg font-semibold bg-gray-700 hover:bg-purple-500';
+                const firstLevelOfWorld = index * 10;
+                if (gameState.highestLevel >= firstLevelOfWorld) {
+                    tab.addEventListener('click', () => renderWorldMap(index));
+                } else {
+                    tab.disabled = true;
+                    tab.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                if (index === worldIndex) {
+                    tab.classList.add('active');
+                }
+                worldTabsContainer.appendChild(tab);
+            });
+
+            levelGrid.innerHTML = '';
+            const startLevel = worldIndex * 10;
+            const endLevel = startLevel + 10;
+            for (let i = startLevel; i < endLevel; i++) {
+                const level = LEVELS[i];
+                const node = document.createElement('button');
+                node.className = 'level-node rounded-full flex items-center justify-center font-bold text-xl';
+                node.textContent = level.level;
+                node.dataset.levelIndex = i;
+
+                if (i <= gameState.highestLevel) {
+                    node.classList.add('unlocked');
+                    node.addEventListener('click', () => {
+                        gameState.currentLevel = i;
+                        renderGameScreen();
+                        prepareLevel();
+                    });
+                }
+                if (i < gameState.highestLevel) {
+                     node.classList.add('completed');
+                }
+                if (i > gameState.highestLevel) {
+                    node.disabled = true;
+                }
+                levelGrid.appendChild(node);
+            }
+            
+            document.getElementById('unlock-btn').addEventListener('click', () => {
+                document.getElementById('unlock-modal').style.display = 'flex';
+            });
+            document.getElementById('world-help-btn').addEventListener('click', () => {
+                const modal = document.getElementById('world-help-modal');
+                modal.querySelector('#world-help-title').textContent = `Objetivos do Mundo ${worldIndex + 1}`;
+                const container = modal.querySelector('#world-help-levels-container');
+                container.innerHTML = '';
+                for (let i = startLevel; i < endLevel; i++) {
+                    const level = LEVELS[i];
+                    const levelDiv = document.createElement('div');
+                    levelDiv.className = 'p-2 bg-gray-700 rounded';
+                    let details = `Nível ${level.level}: ${level.targetScore} pontos`;
+                    if(level.time) {
+                        details += ` em ${level.time}s`;
+                    } else {
+                        details += ` em ${level.moves} jogadas`;
+                    }
+                    levelDiv.textContent = details;
+                    container.appendChild(levelDiv);
+                }
+                modal.style.display = 'flex';
+            });
+            updateUI();
+        }
+
+        function handleUnlockCode() {
+            const input = document.getElementById('unlock-code-input');
+            const feedback = document.getElementById('unlock-feedback');
+            const code = input.value.trim();
+
+            if (code === 'K2000_EIA_CRACK') {
+                gameState.highestLevel = LEVELS.length; // Desbloqueia todos os níveis
+                saveGameData();
+                document.getElementById('unlock-modal').style.display = 'none';
+                feedback.textContent = '';
+                input.value = '';
+                showBonusPopup("Todos os níveis desbloqueados!");
+                renderWorldMap(Math.floor(gameState.currentLevel / 10)); // Re-renderiza o mapa
+            } else {
+                feedback.textContent = 'Código incorreto!';
+                input.value = '';
+            }
+        }
+
+        function renderGameScreen() {
+            const template = document.getElementById('game-screen-template');
+            appContainer.innerHTML = '';
+            appContainer.appendChild(template.content.cloneNode(true));
+
+            // Atribuir os elementos do DOM agora que existem
+            gameBoard = document.getElementById('game-board');
+            scoreDisplay = document.getElementById('game-score-display');
+            movesDisplay = document.getElementById('game-moves-display');
+            levelDisplay = document.getElementById('game-level-display');
+            characterNameDisplay = document.getElementById('game-character-display');
+            targetScoreDisplay = document.getElementById('game-target-display');
+            gameLivesDisplay = document.getElementById('game-lives-display');
+            gameTotalScoreDisplay = document.getElementById('game-total-score-display');
+            
+            document.getElementById('quit-level-btn').addEventListener('click', () => {
+                clearTimeout(gameState.hintTimer);
+                clearInterval(gameState.timerInterval);
+                clearTimeout(gameState.autoReshuffleInterval);
+                renderWorldMap(Math.floor(gameState.currentLevel / 10));
+            });
+            
+            document.getElementById('help-btn').addEventListener('click', () => {
+                document.getElementById('help-modal').style.display = 'flex';
+            });
+            
+            // Preencher a legenda de ícones
+            const legendContainer = document.getElementById('icon-legend-container');
+            legendContainer.innerHTML = '';
+
+            const heroIconMap = [
+                { hero: HEROES[0], icon: ICONS[0] }, 
+                { hero: HEROES[1], icon: ICONS[1] }, 
+                { hero: HEROES[2], icon: ICONS[2] }, 
+            ];
+            heroIconMap.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-4';
+                row.innerHTML = `<div class="w-8 h-8">${item.icon}</div> <span>${ICON_NAMES[ICONS.indexOf(item.icon)]} (${item.hero.name})</span>`;
+                legendContainer.appendChild(row);
+            });
+        }
+
+        // --- LÓGICA DE AUTENTICAÇÃO E HALL OF FAME (LocalStorage) ---
+        function handleRegister() {
+            const name = document.getElementById('register-name').value.trim();
+            const email = document.getElementById('register-email').value.trim().toLowerCase();
+            const password = document.getElementById('register-password').value;
+            const feedback = document.getElementById('register-feedback');
+
+            if (!name || !email || !password) {
+                feedback.textContent = 'Por favor, preencha todos os campos.';
+                return;
+            }
+
+            const db = getLocalDatabase();
+            if (db.users[email]) {
+                feedback.textContent = 'Este email já está registado.';
+                return;
+            }
+
+            // NOTA: Guardar passwords em texto simples é inseguro.
+            // Isto é apenas para uma demonstração local.
+            db.users[email] = { name, password, progress: {} };
+            saveLocalDatabase(db);
+            
+            feedback.textContent = '';
+            document.getElementById('register-modal').style.display = 'none';
+            // Logar o utilizador automaticamente após o registo
+            handleLogin(email, password);
+        }
+
+        function handleLogin(email, password) {
+            const loginEmail = email || document.getElementById('login-email').value.trim().toLowerCase();
+            const loginPassword = password || document.getElementById('login-password').value;
+            const feedback = document.getElementById('login-feedback');
+
+            const db = getLocalDatabase();
+            const user = db.users[loginEmail];
+
+            if (user && user.password === loginPassword) {
+                currentUser = { email: loginEmail, name: user.name };
+                sessionStorage.setItem('eiaCrushCurrentUser', loginEmail); // Guarda na sessão para persistir o login
+                localStorage.setItem('eiaCrushCurrentUserName', user.name);
+                
+                loadGameData(loginEmail);
+                renderMainMenu(currentUser);
+                feedback.textContent = '';
+                document.getElementById('login-modal').style.display = 'none';
+            } else {
+                feedback.textContent = 'Email ou palavra-passe inválidos.';
+            }
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            sessionStorage.removeItem('eiaCrushCurrentUser');
+            localStorage.removeItem('eiaCrushCurrentUserName');
+            resetLocalGameState();
+            renderMainMenu(null);
+        }
+
+        function showHallOfFame() {
+            const modal = document.getElementById('hall-of-fame-modal');
+            const content = document.getElementById('hall-of-fame-content');
+            modal.style.display = 'flex';
+            
+            const db = getLocalDatabase();
+            const players = Object.values(db.users).map(user => ({
+                name: user.name,
+                totalScore: user.progress?.totalScore || 0
+            }));
+
+            players.sort((a, b) => b.totalScore - a.totalScore);
+            const top10 = players.slice(0, 10);
+
+            if (top10.length === 0 || top10.every(p => p.totalScore === 0)) {
+                content.innerHTML = '<p class="text-center">Ainda ninguém chegou ao Hall of Fame. Sê o primeiro!</p>';
+                return;
+            }
+
+            let rankHTML = '<ol class="list-decimal list-inside space-y-3">';
+            top10.forEach((player, index) => {
+                const rank = index + 1;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+                rankHTML += `
+                    <li class="p-2 rounded-lg ${rank <= 3 ? 'bg-yellow-800' : 'bg-gray-700'} flex items-center">
+                        <span class="font-bold text-lg mr-4 w-10 text-center">${medal}</span>
+                        <span class="text-white text-xl flex-grow">${player.name || 'Anónimo'}</span>
+                        <span class="font-bold text-yellow-400">${player.totalScore.toLocaleString()} pts</span>
+                    </li>
+                `;
+            });
+            rankHTML += '</ol>';
+            content.innerHTML = rankHTML;
+        }
+
+        window.onload = () => {
+            document.body.addEventListener('click', () => Tone.start(), { once: true });
+            init();
+        };
+
+    </script>
+</body>
+</html>
