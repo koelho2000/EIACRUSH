@@ -446,10 +446,25 @@
             <h2 class="text-3xl font-bold mb-4">Login</h2>
             <input id="login-email" type="email" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="Email">
             <input id="login-password" type="password" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="Palavra-passe">
-            <div id="login-feedback" class="text-red-500 h-6 mb-2"></div>
-            <div class="flex gap-4 justify-center">
+            <a href="#" id="forgot-password-link" class="text-blue-400 hover:text-blue-300 text-sm">Esqueceu-se da password?</a>
+            <div id="login-feedback" class="text-red-500 h-6 my-2"></div>
+            <div class="flex gap-4 justify-center mt-4">
                  <button id="submit-login-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-full">Entrar</button>
                  <button id="cancel-login-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Reset de Password -->
+    <div id="reset-password-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-8 rounded-2xl shadow-2xl text-center max-w-sm w-11/12 mx-4">
+            <h2 class="text-3xl font-bold mb-4">Recuperar Password</h2>
+            <p class="text-gray-400 mb-4">Insira o seu email para receber um link de recuperação.</p>
+            <input id="reset-email" type="email" class="w-full p-2 rounded bg-gray-700 text-white text-center mb-4" placeholder="Email">
+            <div id="reset-feedback" class="h-6 my-2"></div>
+            <div class="flex gap-4 justify-center mt-4">
+                 <button id="submit-reset-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Enviar</button>
+                 <button id="cancel-reset-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full">Cancelar</button>
             </div>
         </div>
     </div>
@@ -487,14 +502,50 @@
 
 
     <script type="module">
-        // --- CONFIGURAÇÃO DO JOGO (VERSÃO LOCAL) ---
+        // --- IMPORTS E CONFIGURAÇÃO DO FIREBASE ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword,
+            signOut,
+            updateProfile,
+            sendPasswordResetEmail
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc,
+            collection,
+            query,
+            orderBy,
+            limit,
+            getDocs
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // #######################################################################
+        // IMPORTANTE: COLE A SUA CONFIGURAÇÃO DO FIREBASE AQUI
+        // #######################################################################
+        const firebaseConfig = {
+            apiKey: "AIzaSyDbT3GVrCodS7ay2S3uLqxyjGRjh-5OgiQ",
+            authDomain: "eiacrush.firebaseapp.com",
+            projectId: "eiacrush",
+            storageBucket: "eiacrush.firebasestorage.app",
+            messagingSenderId: "189465509772",
+            appId: "1:189465509772:web:64a99ea83a02faac1060a9"
+        };
+        // #######################################################################
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
         
         const appContainer = document.getElementById('app');
         // Variáveis para os elementos do DOM
         let gameBoard, scoreDisplay, movesDisplay, levelDisplay, characterNameDisplay, targetScoreDisplay, menuLivesDisplay, gameLivesDisplay, menuTotalScoreDisplay, mapTotalScoreDisplay, gameTotalScoreDisplay;
-        
-        // Variável para guardar o estado do utilizador logado
-        let currentUser = null;
 
         const HEROES = [
             { 
@@ -637,16 +688,15 @@
         // --- FUNÇÕES PRINCIPAIS DO JOGO ---
 
         function init() {
-            // Verifica se há um utilizador logado na sessão atual
-            const loggedInUserEmail = sessionStorage.getItem('eiaCrushCurrentUser');
-            if (loggedInUserEmail) {
-                currentUser = { email: loggedInUserEmail, name: localStorage.getItem('eiaCrushCurrentUserName') };
-                loadGameData(currentUser.email);
-            } else {
-                currentUser = null;
-                resetLocalGameState();
-            }
-            renderMainMenu(currentUser);
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    await loadGameData(user.uid);
+                    renderMainMenu(user);
+                } else {
+                    resetLocalGameState();
+                    renderMainMenu(null);
+                }
+            });
             
             // Listeners dos modais do jogo
             document.getElementById('start-game-btn').addEventListener('click', async () => { document.getElementById('level-start-modal').style.display = 'none'; await startGame(); });
@@ -661,10 +711,18 @@
                 document.getElementById('unlock-code-input').value = '';
             });
             // Listeners dos modais de autenticação
-            document.getElementById('submit-login-btn').addEventListener('click', () => handleLogin());
+            document.getElementById('submit-login-btn').addEventListener('click', handleLogin);
             document.getElementById('cancel-login-btn').addEventListener('click', () => { document.getElementById('login-modal').style.display = 'none'; });
-            document.getElementById('submit-register-btn').addEventListener('click', () => handleRegister());
+            document.getElementById('submit-register-btn').addEventListener('click', handleRegister);
             document.getElementById('cancel-register-btn').addEventListener('click', () => { document.getElementById('register-modal').style.display = 'none'; });
+            document.getElementById('forgot-password-link').addEventListener('click', () => {
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('reset-password-modal').style.display = 'flex';
+            });
+            document.getElementById('submit-reset-btn').addEventListener('click', handlePasswordReset);
+            document.getElementById('cancel-reset-btn').addEventListener('click', () => {
+                document.getElementById('reset-password-modal').style.display = 'none';
+            });
             // Listener para fechar o Hall of Fame
             document.getElementById('close-hof-btn').addEventListener('click', () => { document.getElementById('hall-of-fame-modal').style.display = 'none'; });
         }
@@ -1352,7 +1410,9 @@
             await animateFinalScore();
 
             const oldTotalScore = gameState.totalScore;
-            gameState.totalScore += gameState.score;
+            const finalLevelScore = gameState.score; // Guarda a pontuação final do nível (com bónus)
+            gameState.totalScore = oldTotalScore + finalLevelScore;
+
             const oldMilestone = Math.floor(oldTotalScore / 10000);
             const newMilestone = Math.floor(gameState.totalScore / 10000);
 
@@ -1576,54 +1636,42 @@
             }
         }
 
-        // --- DADOS DO JOGO (LocalStorage) ---
-        
-        // Função auxiliar para ler a base de dados local
-        function getLocalDatabase() {
-            const db = localStorage.getItem('eiaCrushDatabase');
-            return db ? JSON.parse(db) : { users: {} };
-        }
+        // --- DADOS DO JOGO (Firestore / LocalStorage) ---
+        async function saveGameData() {
+            const user = auth.currentUser;
+            const data = {
+                lives: gameState.lives,
+                highestLevel: gameState.highestLevel,
+                livesOutTimestamp: gameState.livesOutTimestamp,
+                totalScore: gameState.totalScore,
+                socialClaims: gameState.socialClaims
+            };
+            if (user) {
+                const userDocRef = doc(db, "users", user.uid);
+                await setDoc(userDocRef, data, { merge: true });
 
-        // Função auxiliar para escrever na base de dados local
-        function saveLocalDatabase(db) {
-            localStorage.setItem('eiaCrushDatabase', JSON.stringify(db));
-        }
-
-        function saveGameData() {
-            const userEmail = currentUser?.email;
-            if (userEmail) { // Utilizador registado
-                const db = getLocalDatabase();
-                if (!db.users[userEmail]) {
-                    db.users[userEmail] = {};
-                }
-                // Atualiza os dados de progresso do utilizador
-                db.users[userEmail].progress = {
-                    lives: gameState.lives,
-                    highestLevel: gameState.highestLevel,
-                    livesOutTimestamp: gameState.livesOutTimestamp,
+                const leaderboardDocRef = doc(db, "leaderboard", user.uid);
+                const leaderboardData = {
+                    name: user.displayName,
                     totalScore: gameState.totalScore,
-                    socialClaims: gameState.socialClaims
+                    highestLevel: gameState.highestLevel + 1 // Mostra o nível atual, não o último completado
                 };
-                saveLocalDatabase(db);
-            } else { // Modo convidado
-                const guestData = {
-                    lives: gameState.lives,
-                    highestLevel: gameState.highestLevel,
-                    livesOutTimestamp: gameState.livesOutTimestamp,
-                    totalScore: gameState.totalScore,
-                    socialClaims: gameState.socialClaims
-                };
-                localStorage.setItem('eiaCrushGuestData', JSON.stringify(guestData));
+                await setDoc(leaderboardDocRef, leaderboardData, { merge: true });
+            } else {
+                localStorage.setItem('eiaCrushGuestData', JSON.stringify(data));
             }
         }
 
-        function loadGameData(userEmail) {
+        async function loadGameData(userId) {
             const ONE_HOUR = 60 * 60 * 1000;
             let data;
-            if (userEmail) { // Utilizador registado
-                const db = getLocalDatabase();
-                data = db.users[userEmail]?.progress;
-            } else { // Modo convidado
+            if (userId) {
+                const userDocRef = doc(db, "users", userId);
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                    data = docSnap.data();
+                }
+            } else {
                 data = JSON.parse(localStorage.getItem('eiaCrushGuestData'));
             }
 
@@ -1645,12 +1693,12 @@
                         } else {
                              gameState.livesOutTimestamp += livesGained * ONE_HOUR;
                         }
-                        saveGameData();
+                        if(auth.currentUser) await saveGameData();
                     }
                 }
             } else {
                 resetLocalGameState();
-                saveGameData(); // Cria o registo inicial para o utilizador
+                if (userId) await saveGameData(); // Cria o documento para o novo utilizador
             }
         }
 
@@ -1729,7 +1777,7 @@
             if (user) {
                 authButtons.classList.add('hidden');
                 userInfo.classList.remove('hidden');
-                document.getElementById('username-display').textContent = user.name || user.email;
+                document.getElementById('username-display').textContent = user.displayName || user.email;
                 document.getElementById('play-map-btn').addEventListener('click', () => renderWorldMap(Math.floor(gameState.highestLevel / 10)));
                 menuLivesDisplay = document.getElementById('menu-lives-display');
                 menuTotalScoreDisplay = document.getElementById('menu-total-score-display');
@@ -1761,9 +1809,9 @@
             const backBtn = document.getElementById('back-to-main-menu-btn');
             const logoutBtn = document.getElementById('logout-btn');
 
-            backBtn.addEventListener('click', () => renderMainMenu(currentUser));
+            backBtn.addEventListener('click', () => renderMainMenu(auth.currentUser));
 
-            if (currentUser) {
+            if (auth.currentUser) {
                 logoutBtn.classList.remove('hidden');
                 logoutBtn.addEventListener('click', handleLogout);
             }
@@ -1900,10 +1948,10 @@
             });
         }
 
-        // --- LÓGICA DE AUTENTICAÇÃO E HALL OF FAME (LocalStorage) ---
-        function handleRegister() {
+        // --- LÓGICA DE AUTENTICAÇÃO E HALL OF FAME (Firebase) ---
+        async function handleRegister() {
             const name = document.getElementById('register-name').value.trim();
-            const email = document.getElementById('register-email').value.trim().toLowerCase();
+            const email = document.getElementById('register-email').value.trim();
             const password = document.getElementById('register-password').value;
             const feedback = document.getElementById('register-feedback');
 
@@ -1912,86 +1960,105 @@
                 return;
             }
 
-            const db = getLocalDatabase();
-            if (db.users[email]) {
-                feedback.textContent = 'Este email já está registado.';
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await updateProfile(userCredential.user, { displayName: name });
+                // O onAuthStateChanged tratará de fazer o login e carregar os dados
+                document.getElementById('register-modal').style.display = 'none';
+            } catch (error) {
+                console.error("Register Error:", error.code);
+                if (error.code === 'auth/email-already-in-use') {
+                    feedback.textContent = 'Este email já está registado.';
+                } else if (error.code === 'auth/weak-password') {
+                    feedback.textContent = 'A palavra-passe deve ter pelo menos 6 caracteres.';
+                } else {
+                    feedback.textContent = "Erro ao registar. Tente novamente.";
+                }
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const feedback = document.getElementById('login-feedback');
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // O onAuthStateChanged tratará do resto
+                document.getElementById('login-modal').style.display = 'none';
+            } catch (error) {
+                console.error("Login Error:", error.code);
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    feedback.textContent = 'Email ou palavra-passe inválidos.';
+                } else {
+                    feedback.textContent = 'Erro ao fazer login. Tente mais tarde.';
+                }
+            }
+        }
+
+        async function handlePasswordReset() {
+            const email = document.getElementById('reset-email').value;
+            const feedback = document.getElementById('reset-feedback');
+            if (!email) {
+                feedback.textContent = 'Por favor, insira o seu email.';
+                feedback.classList.add('text-red-500');
                 return;
             }
-
-            // NOTA: Guardar passwords em texto simples é inseguro.
-            // Isto é apenas para uma demonstração local.
-            db.users[email] = { name, password, progress: {} };
-            saveLocalDatabase(db);
-            
-            feedback.textContent = '';
-            document.getElementById('register-modal').style.display = 'none';
-            // Logar o utilizador automaticamente após o registo
-            handleLogin(email, password);
-        }
-
-        function handleLogin(email, password) {
-            const loginEmail = email || document.getElementById('login-email').value.trim().toLowerCase();
-            const loginPassword = password || document.getElementById('login-password').value;
-            const feedback = document.getElementById('login-feedback');
-
-            const db = getLocalDatabase();
-            const user = db.users[loginEmail];
-
-            if (user && user.password === loginPassword) {
-                currentUser = { email: loginEmail, name: user.name };
-                sessionStorage.setItem('eiaCrushCurrentUser', loginEmail); // Guarda na sessão para persistir o login
-                localStorage.setItem('eiaCrushCurrentUserName', user.name);
-                
-                loadGameData(loginEmail);
-                renderMainMenu(currentUser);
-                feedback.textContent = '';
-                document.getElementById('login-modal').style.display = 'none';
-            } else {
-                feedback.textContent = 'Email ou palavra-passe inválidos.';
+            try {
+                await sendPasswordResetEmail(auth, email);
+                feedback.textContent = 'Email de recuperação enviado!';
+                feedback.classList.remove('text-red-500');
+                feedback.classList.add('text-green-500');
+            } catch (error) {
+                feedback.textContent = 'Erro ao enviar o email. Verifique o endereço.';
+                feedback.classList.add('text-red-500');
             }
         }
 
-        function handleLogout() {
-            currentUser = null;
-            sessionStorage.removeItem('eiaCrushCurrentUser');
-            localStorage.removeItem('eiaCrushCurrentUserName');
-            resetLocalGameState();
-            renderMainMenu(null);
+        async function handleLogout() {
+            await signOut(auth);
+            // O onAuthStateChanged tratará de limpar o estado e renderizar o menu
         }
 
-        function showHallOfFame() {
+        async function showHallOfFame() {
             const modal = document.getElementById('hall-of-fame-modal');
             const content = document.getElementById('hall-of-fame-content');
             modal.style.display = 'flex';
-            
-            const db = getLocalDatabase();
-            const players = Object.values(db.users).map(user => ({
-                name: user.name,
-                totalScore: user.progress?.totalScore || 0
-            }));
+            content.innerHTML = '<p class="text-center">A carregar o ranking...</p>';
 
-            players.sort((a, b) => b.totalScore - a.totalScore);
-            const top10 = players.slice(0, 10);
+            try {
+                const leaderboardRef = collection(db, "leaderboard");
+                const q = query(leaderboardRef, orderBy("totalScore", "desc"), limit(10));
+                const querySnapshot = await getDocs(q);
 
-            if (top10.length === 0 || top10.every(p => p.totalScore === 0)) {
-                content.innerHTML = '<p class="text-center">Ainda ninguém chegou ao Hall of Fame. Sê o primeiro!</p>';
-                return;
+                if (querySnapshot.empty) {
+                    content.innerHTML = '<p class="text-center">Ainda ninguém chegou ao Hall of Fame. Sê o primeiro!</p>';
+                    return;
+                }
+
+                let rankHTML = '<ol class="list-decimal list-inside space-y-3">';
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const player = doc.data();
+                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+                    rankHTML += `
+                        <li class="p-2 rounded-lg ${rank <= 3 ? 'bg-yellow-800' : 'bg-gray-700'} flex items-center">
+                            <span class="font-bold text-lg mr-4 w-10 text-center">${medal}</span>
+                            <div class="flex-grow">
+                                <span class="text-white text-xl">${player.name || 'Anónimo'}</span>
+                                <span class="block text-xs text-gray-300">Nível: ${player.highestLevel || 1}</span>
+                            </div>
+                            <span class="font-bold text-yellow-400">${player.totalScore.toLocaleString()} pts</span>
+                        </li>
+                    `;
+                    rank++;
+                });
+                rankHTML += '</ol>';
+                content.innerHTML = rankHTML;
+
+            } catch (error) {
+                console.error("Erro ao carregar o Hall of Fame:", error);
+                content.innerHTML = '<p class="text-center text-red-500">Não foi possível carregar o ranking. Tenta mais tarde.</p>';
             }
-
-            let rankHTML = '<ol class="list-decimal list-inside space-y-3">';
-            top10.forEach((player, index) => {
-                const rank = index + 1;
-                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-                rankHTML += `
-                    <li class="p-2 rounded-lg ${rank <= 3 ? 'bg-yellow-800' : 'bg-gray-700'} flex items-center">
-                        <span class="font-bold text-lg mr-4 w-10 text-center">${medal}</span>
-                        <span class="text-white text-xl flex-grow">${player.name || 'Anónimo'}</span>
-                        <span class="font-bold text-yellow-400">${player.totalScore.toLocaleString()} pts</span>
-                    </li>
-                `;
-            });
-            rankHTML += '</ol>';
-            content.innerHTML = rankHTML;
         }
 
         window.onload = () => {
