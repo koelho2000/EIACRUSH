@@ -233,6 +233,12 @@
         <!-- O JOGO SERÁ RENDERIZADO AQUI -->
     </div>
 
+    <audio id="music-player" loop></audio>
+    <button id="mute-btn" class="fixed bottom-4 right-4 z-50 bg-purple-600 hover:bg-purple-700 text-white font-bold p-3 rounded-full shadow-lg transition-transform transform hover:scale-110">
+        <svg id="speaker-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+        <svg id="muted-speaker-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2 2m2-2l2 2"></path></svg>
+    </button>
+
     <!-- Templates para os ecrãs do jogo -->
     <template id="main-menu-template">
         <div class="flex flex-col items-center justify-center h-full bg-gray-900 p-4">
@@ -606,10 +612,13 @@
         const appContainer = document.getElementById('app');
         // Variáveis para os elementos do DOM
         let gameBoard, scoreDisplay, movesDisplay, levelDisplay, characterNameDisplay, targetScoreDisplay, menuLivesDisplay, gameLivesDisplay, menuTotalScoreDisplay, mapTotalScoreDisplay, gameTotalScoreDisplay;
+        let musicPlayer;
+        let isMuted = false;
 
         const HEROES = [
             { 
                 name: 'Sunny', color: 'yellow', img: 'https://placehold.co/150x150/f59e0b/ffffff?text=S', 
+                music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Sunny%5BRise&Shine%5D%23EIA.mp3",
                 description: 'Sunny é a personificação da energia solar. Sempre otimista, irradia calor e positividade, iluminando o caminho para um futuro mais limpo.',
                 messages: [
                     "Energia limpa a brilhar!", "Um passo de cada vez!", "A eficiência é a chave!",
@@ -619,6 +628,7 @@
             },
             { 
                 name: 'Breezy', color: 'blue', img: 'https://placehold.co/150x150/60a5fa/ffffff?text=B', 
+                music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Ride%20the%20Wind%20-%20Breezy's%20Song.mp3",
                 description: 'Breezy comanda a força dos ventos. É ágil, rápido e livre, representando o poder imparável da energia eólica para mover o mundo.',
                 messages: [
                     "Sente a força do vento!", "Uma brisa de vitória!", "Leve como o ar!",
@@ -628,6 +638,7 @@
             },
             { 
                 name: 'Splashy', color: 'indigo', img: 'https://placehold.co/150x150/4f46e5/ffffff?text=S', 
+                music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Make%20a%20Splash!%20-%20Splashy%E2%80%99s%20Song.mp3",
                 description: 'Splashy representa a energia hídrica. Calmo mas poderoso, a sua força reside na constância e na capacidade de se adaptar e fluir.',
                 messages: [
                     "Um mar de pontos!", "A fluir para a vitória!", "Puro como a água!",
@@ -638,9 +649,13 @@
         ];
         
         const VILLAINS = [
-            { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O', description: 'Oily é o barão do petróleo. Astuto e escorregadio, ele tenta manter o mundo preso ao passado, sujando tudo à sua volta.', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
-            { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S', description: 'Smokey é a personificação da poluição do carvão. Deixa um rasto de fumo e cinza por onde passa, obscurecendo o futuro.', message: "O meu fumo vai-te deixar a tossir!" },
-            { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G', description: 'Gassy representa os gases de efeito estufa. É volátil e traiçoeiro, sempre a tentar aquecer o planeta com as suas emissões.', message: "Não vais conseguir aguentar este cheiro a derrota!" },
+            { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O', 
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Fuel%20the%20Fire%20-%20Oily's%20Song.mp3", 
+            description: 'Oily é o barão do petróleo. Astuto e escorregadio, ele tenta manter o mundo preso ao passado, sujando tudo à sua volta.', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
+            { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S', 
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%5BBurning-Strong%5D%23EIA.mp3", description: 'Smokey é a personificação da poluição do carvão. Deixa um rasto de fumo e cinza por onde passa, obscurecendo o futuro.', message: "O meu fumo vai-te deixar a tossir!" },
+            { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G', 
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Zoom,%20Boom,%20Whoosh!%20-%20Gassy%E2%80%99s%20Song.mp3", description: 'Gassy representa os gases de efeito estufa. É volátil e traiçoeiro, sempre a tentar aquecer o planeta com as suas emissões.', message: "Não vais conseguir aguentar este cheiro a derrota!" },
         ];
         
         const worldCharacters = [
@@ -771,9 +786,54 @@
             { name: "Gás Natural", icon: ICONS[5], description: "Um combustível fóssil menos poluente que o carvão e o petróleo, mas que ainda assim liberta gases de efeito estufa na sua combustão." }
         ];
 
+        // --- FUNÇÕES DE ÁUDIO ---
+        function playMusic(src, volume = 0.3) {
+            if (!musicPlayer || !src) return;
+            // Verifica se a música a tocar já é a correta para evitar recarregamentos
+            if (musicPlayer.currentSrc && musicPlayer.currentSrc.includes(encodeURI(src))) {
+                musicPlayer.volume = isMuted ? 0 : volume;
+                if (musicPlayer.paused) {
+                    musicPlayer.play().catch(e => console.log("A reprodução foi interrompida."));
+                }
+                return;
+            }
+            musicPlayer.src = src;
+            musicPlayer.volume = isMuted ? 0 : volume;
+            const playPromise = musicPlayer.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("A reprodução automática foi impedida. É necessária interação do utilizador.");
+                });
+            }
+        }
+
+        function stopMusic() {
+            if (!musicPlayer) return;
+            musicPlayer.pause();
+            musicPlayer.currentTime = 0;
+            musicPlayer.src = ""; // Limpa a fonte para garantir que para
+        }
+
+        function setMusicVolume(volume) {
+            if (!musicPlayer) return;
+            musicPlayer.volume = isMuted ? 0 : volume;
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            Tone.Master.mute = isMuted;
+            musicPlayer.muted = isMuted;
+            
+            document.getElementById('speaker-icon').classList.toggle('hidden', isMuted);
+            document.getElementById('muted-speaker-icon').classList.toggle('hidden', !isMuted);
+        }
+
         // --- FUNÇÕES PRINCIPAIS DO JOGO ---
 
         function init() {
+            musicPlayer = document.getElementById('music-player');
+            document.getElementById('mute-btn').addEventListener('click', toggleMute);
+
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     await loadGameData(user.uid);
@@ -785,10 +845,21 @@
             });
             
             // Listeners dos modais do jogo
-            document.getElementById('start-game-btn').addEventListener('click', async () => { document.getElementById('level-start-modal').style.display = 'none'; await startGame(); });
+            document.getElementById('start-game-btn').addEventListener('click', async () => { 
+                document.getElementById('level-start-modal').style.display = 'none'; 
+                setMusicVolume(0.1); // Baixa o volume para o nível
+                await startGame(); 
+            });
             document.getElementById('continue-to-score-btn').addEventListener('click', showLevelCompleteModal);
-            document.getElementById('next-level-btn').addEventListener('click', () => { document.getElementById('level-complete-modal').style.display = 'none'; renderWorldMap(Math.floor(gameState.currentLevel / 10)); });
-            document.getElementById('start-bonus-btn').addEventListener('click', async () => { document.getElementById('bonus-level-modal').style.display = 'none'; await startGame(); });
+            document.getElementById('next-level-btn').addEventListener('click', () => { 
+                document.getElementById('level-complete-modal').style.display = 'none'; 
+                renderWorldMap(Math.floor(gameState.currentLevel / 10)); 
+            });
+            document.getElementById('start-bonus-btn').addEventListener('click', async () => { 
+                document.getElementById('bonus-level-modal').style.display = 'none'; 
+                setMusicVolume(0.1);
+                await startGame(); 
+            });
             document.getElementById('close-help-btn').addEventListener('click', () => { document.getElementById('help-modal').style.display = 'none'; });
             document.getElementById('close-world-help-btn').addEventListener('click', () => { document.getElementById('world-help-modal').style.display = 'none'; });
             document.getElementById('submit-unlock-btn').addEventListener('click', handleUnlockCode);
@@ -1893,6 +1964,7 @@
         
         // --- RENDERIZAÇÃO DE ECRÃS ---
         function renderMainMenu(user) {
+            stopMusic();
             gameBoard = null;
             mapTotalScoreDisplay = null;
             gameTotalScoreDisplay = null;
@@ -1928,6 +2000,9 @@
         }
 
         function renderWorldMap(worldIndex = 0) {
+            const worldMusic = worldCharacters[worldIndex].music;
+            playMusic(worldMusic, 0.3);
+
             gameBoard = null;
             menuTotalScoreDisplay = null;
             gameTotalScoreDisplay = null;
@@ -1939,12 +2014,16 @@
             const levelGrid = document.getElementById('level-grid');
             const backBtn = document.getElementById('back-to-main-menu-btn');
             const logoutBtn = document.getElementById('logout-btn');
+            const unlockBtn = document.getElementById('unlock-btn');
 
             backBtn.addEventListener('click', () => renderMainMenu(auth.currentUser));
 
             if (auth.currentUser) {
                 logoutBtn.classList.remove('hidden');
                 logoutBtn.addEventListener('click', handleLogout);
+                unlockBtn.classList.add('hidden'); // Esconde o botão de desbloquear para utilizadores com login
+            } else {
+                unlockBtn.classList.remove('hidden'); // Garante que o botão está visível para convidados
             }
 
             worldCharacters.forEach((character, index) => {
@@ -1991,7 +2070,7 @@
                 levelGrid.appendChild(node);
             }
             
-            document.getElementById('unlock-btn').addEventListener('click', () => {
+            unlockBtn.addEventListener('click', () => {
                 document.getElementById('unlock-modal').style.display = 'flex';
             });
             document.getElementById('world-help-btn').addEventListener('click', () => {
@@ -2055,6 +2134,7 @@
                 clearTimeout(gameState.hintTimer);
                 clearInterval(gameState.timerInterval);
                 clearTimeout(gameState.autoReshuffleInterval);
+                stopMusic();
                 renderWorldMap(Math.floor(gameState.currentLevel / 10));
             });
             
@@ -2147,6 +2227,7 @@
 
         async function handleLogout() {
             await signOut(auth);
+            stopMusic();
             // O onAuthStateChanged tratará de limpar o estado e renderizar o menu
         }
 
