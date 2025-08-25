@@ -205,6 +205,26 @@
             color: white;
             transform: translateY(-2px);
         }
+
+        /* Animações de Combo */
+        .board-clear-ripple {
+            position: absolute;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            animation: ripple-out 0.7s forwards;
+        }
+        @keyframes ripple-out {
+            from {
+                width: 0%;
+                height: 0%;
+                opacity: 1;
+            }
+            to {
+                width: 200%;
+                height: 200%;
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-800 text-white overflow-hidden h-screen">
@@ -231,7 +251,11 @@
                 <div class="mt-8 text-lg">Vidas: <span id="menu-lives-display" class="font-bold">5</span></div>
                 <div class="mt-4 text-lg">Pontuação Total: <span id="menu-total-score-display" class="font-bold">0</span></div>
             </div>
-             <button id="hall-of-fame-btn" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full text-lg">Hall of Fame</button>
+            <div class="flex flex-wrap gap-4 mt-6 justify-center">
+                 <button id="history-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-full text-lg">História da EIA</button>
+                 <button id="glossary-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-full text-lg">Glossário de Energia</button>
+                 <button id="hall-of-fame-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full text-lg">Hall of Fame</button>
+            </div>
             <div class="flex space-x-6 mt-8">
                 <a href="https://www.tiktok.com/@koelho2000" target="_blank" class="text-gray-400 hover:text-white transition-transform transform hover:scale-110">
                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-2.43.05-4.85-.98-6.46-2.9-1.6-1.92-2.3-4.41-2.06-6.93.24-2.52 1.86-4.86 4.03-5.9 2.17-1.04 4.66-.98 6.78.15.01-.01.01-.02.01-.03.01-2.2 0-4.4-.01-6.6.01-1.21-.43-2.37-1.12-3.32C11.37 1.42 10.11.41 8.7.11c-.02.01-.02.01-.03.01.01-.01.01-.01.02-.01z"/></svg>
@@ -243,7 +267,8 @@
                     <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.823v-7.04l6.02 3.52-6.02 3.52z"/></svg>
                 </a>
             </div>
-             <a href="https://www.eia.pt" target="_blank" class="absolute bottom-4 text-center text-gray-400 text-sm hover:text-white">www.eia.pt</a>
+             <a href="https://www.eia.pt" target="_blank" class="absolute bottom-8 text-center text-gray-400 text-sm hover:text-white">www.eia.pt</a>
+             <p class="absolute bottom-2 text-center text-gray-500 text-xs">Original idea by José Coelho - koelho2000</p>
         </div>
     </template>
 
@@ -293,6 +318,7 @@
             </div>
             <!-- Game Board -->
             <div id="game-board-container" class="w-full max-w-lg aspect-square p-2 relative">
+                <div id="animation-layer" class="absolute inset-0 pointer-events-none z-10"></div>
                 <div id="game-board" class="game-board w-full h-full rounded-lg"></div>
             </div>
             <!-- Footer -->
@@ -326,6 +352,15 @@
             <div id="start-modal-extra-info" class="text-lg mb-4"></div>
             <button id="start-game-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105">Jogar</button>
             <a href="https://www.eia.pt" target="_blank" class="block text-center text-gray-400 mt-4 text-sm hover:text-white">www.eia.pt</a>
+        </div>
+    </div>
+
+    <!-- Modal "Sabia Que?" -->
+    <div id="sabia-que-modal" class="modal">
+        <div class="modal-content bg-blue-800 p-8 rounded-2xl shadow-2xl text-center max-w-md mx-4">
+            <h2 class="text-3xl font-bold mb-4 text-yellow-300">Sabia Que?</h2>
+            <p id="sabia-que-fact" class="text-lg mb-6"></p>
+            <button id="continue-to-score-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-full text-xl">Continuar</button>
         </div>
     </div>
 
@@ -411,6 +446,31 @@
                         <!-- A legenda será preenchida por JavaScript -->
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Glossário -->
+    <div id="glossary-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-6 rounded-2xl shadow-2xl text-left max-w-lg w-11/12 mx-4 relative">
+            <h2 class="text-3xl font-bold mb-4 text-center text-yellow-400">Glossário de Energia</h2>
+            <button id="close-glossary-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">X</button>
+            <div id="glossary-content" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                <!-- Conteúdo do glossário será inserido aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal História -->
+    <div id="history-modal" class="modal">
+        <div class="modal-content bg-gray-800 p-6 rounded-2xl shadow-2xl text-left max-w-lg w-11/12 mx-4 relative">
+            <h2 class="text-3xl font-bold mb-4 text-center text-teal-400">A História da EIA</h2>
+            <button id="close-history-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">X</button>
+            <div id="history-content" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                <p class="text-gray-300">Num mundo a lutar por um futuro mais limpo, as forças da Natureza ganham vida! Os Heróis da Energia Renovável - Sunny, Breezy e Splashy - unem-se para energizar o planeta de forma sustentável. Mas os Vilões dos Combustíveis Fósseis - Oily, Smokey e Gassy - farão de tudo para manter o mundo dependente das suas fontes de energia poluentes. Ajuda os heróis nesta batalha épica, combinando as energias certas para salvar o dia!</p>
+                
+                <div id="heroes-section"></div>
+                <div id="villains-section"></div>
             </div>
         </div>
     </div>
@@ -550,6 +610,7 @@
         const HEROES = [
             { 
                 name: 'Sunny', color: 'yellow', img: 'https://placehold.co/150x150/f59e0b/ffffff?text=S', 
+                description: 'Sunny é a personificação da energia solar. Sempre otimista, irradia calor e positividade, iluminando o caminho para um futuro mais limpo.',
                 messages: [
                     "Energia limpa a brilhar!", "Um passo de cada vez!", "A eficiência é a chave!",
                     "Cada ponto conta!", "Futuro brilhante à vista!", "Estás a aquecer!",
@@ -558,6 +619,7 @@
             },
             { 
                 name: 'Breezy', color: 'blue', img: 'https://placehold.co/150x150/60a5fa/ffffff?text=B', 
+                description: 'Breezy comanda a força dos ventos. É ágil, rápido e livre, representando o poder imparável da energia eólica para mover o mundo.',
                 messages: [
                     "Sente a força do vento!", "Uma brisa de vitória!", "Leve como o ar!",
                     "A energia eólica não para!", "Impressionante!", "Voando alto!",
@@ -566,6 +628,7 @@
             },
             { 
                 name: 'Splashy', color: 'indigo', img: 'https://placehold.co/150x150/4f46e5/ffffff?text=S', 
+                description: 'Splashy representa a energia hídrica. Calmo mas poderoso, a sua força reside na constância e na capacidade de se adaptar e fluir.',
                 messages: [
                     "Um mar de pontos!", "A fluir para a vitória!", "Puro como a água!",
                     "Força hídrica!", "Onda de sucesso!", "Estás a mergulhar fundo!",
@@ -575,9 +638,9 @@
         ];
         
         const VILLAINS = [
-            { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
-            { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S', message: "O meu fumo vai-te deixar a tossir!" },
-            { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G', message: "Não vais conseguir aguentar este cheiro a derrota!" },
+            { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O', description: 'Oily é o barão do petróleo. Astuto e escorregadio, ele tenta manter o mundo preso ao passado, sujando tudo à sua volta.', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
+            { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S', description: 'Smokey é a personificação da poluição do carvão. Deixa um rasto de fumo e cinza por onde passa, obscurecendo o futuro.', message: "O meu fumo vai-te deixar a tossir!" },
+            { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G', description: 'Gassy representa os gases de efeito estufa. É volátil e traiçoeiro, sempre a tentar aquecer o planeta com as suas emissões.', message: "Não vais conseguir aguentar este cheiro a derrota!" },
         ];
         
         const worldCharacters = [
@@ -682,9 +745,32 @@
             super: new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 10, envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 } }).toDestination(),
             win: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth" }, envelope: { attack: 0.05, decay: 0.2, sustain: 0.3, release: 0.5 } }).toDestination(),
             lose: new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'fmsquare', modulationType: 'sawtooth', modulationIndex: 3, harmonicity: 3.4 }, envelope: { attack: 0.05, decay: 0.4, sustain: 0.1, release: 1 } }).toDestination(),
-            bonus: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination()
+            bonus: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
+            tick: new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 6, envelope: { attack: 0.001, decay: 0.2, sustain: 0 } }).toDestination()
         };
+        sounds.tick.volume.value = -12;
         
+        // --- CONTEÚDO EDUCATIVO ---
+        const ENERGY_FACTS = [
+            "A energia solar captada pela Terra numa hora é suficiente para abastecer o planeta inteiro por um ano.",
+            "Uma única turbina eólica pode gerar eletricidade suficiente para abastecer cerca de 1.500 casas.",
+            "A energia hídrica, proveniente da força da água, é uma das fontes de energia renovável mais antigas e utilizadas no mundo.",
+            "Portugal tem um dos maiores parques de energia solar flutuante da Europa, no Alqueva.",
+            "Reduzir a temperatura do seu aquecimento em apenas 1°C pode poupar até 10% na sua fatura de energia.",
+            "Lâmpadas LED consomem até 80% menos energia e duram 25 vezes mais do que as lâmpadas tradicionais.",
+            "Deixar aparelhos em stand-by pode representar até 10% do consumo de eletricidade de uma casa.",
+            "A energia geotérmica aproveita o calor do interior da Terra para gerar eletricidade e aquecimento."
+        ];
+
+        const ENERGY_GLOSSARY = [
+            { name: "Energia Solar", icon: ICONS[0], description: "Gerada a partir da luz e do calor do sol. É uma das fontes de energia mais limpas e abundantes, captada através de painéis fotovoltaicos." },
+            { name: "Energia Eólica", icon: ICONS[1], description: "Produzida pela força dos ventos. As turbinas eólicas convertem o movimento das suas pás em eletricidade sem emitir gases poluentes." },
+            { name: "Energia Hídrica", icon: ICONS[2], description: "Utiliza a força do movimento da água, como em rios e barragens, para gerar eletricidade. É uma fonte renovável e fiável." },
+            { name: "Petróleo", icon: ICONS[3], description: "Um combustível fóssil que, ao ser queimado, liberta grandes quantidades de dióxido de carbono, contribuindo para o aquecimento global." },
+            { name: "Carvão", icon: ICONS[4], description: "Outro combustível fóssil e uma das fontes de energia mais poluentes. A sua queima é uma das principais causas de chuva ácida e poluição do ar." },
+            { name: "Gás Natural", icon: ICONS[5], description: "Um combustível fóssil menos poluente que o carvão e o petróleo, mas que ainda assim liberta gases de efeito estufa na sua combustão." }
+        ];
+
         // --- FUNÇÕES PRINCIPAIS DO JOGO ---
 
         function init() {
@@ -700,6 +786,7 @@
             
             // Listeners dos modais do jogo
             document.getElementById('start-game-btn').addEventListener('click', async () => { document.getElementById('level-start-modal').style.display = 'none'; await startGame(); });
+            document.getElementById('continue-to-score-btn').addEventListener('click', showLevelCompleteModal);
             document.getElementById('next-level-btn').addEventListener('click', () => { document.getElementById('level-complete-modal').style.display = 'none'; renderWorldMap(Math.floor(gameState.currentLevel / 10)); });
             document.getElementById('start-bonus-btn').addEventListener('click', async () => { document.getElementById('bonus-level-modal').style.display = 'none'; await startGame(); });
             document.getElementById('close-help-btn').addEventListener('click', () => { document.getElementById('help-modal').style.display = 'none'; });
@@ -723,8 +810,10 @@
             document.getElementById('cancel-reset-btn').addEventListener('click', () => {
                 document.getElementById('reset-password-modal').style.display = 'none';
             });
-            // Listener para fechar o Hall of Fame
+            // Listener para fechar o Hall of Fame e o Glossário
             document.getElementById('close-hof-btn').addEventListener('click', () => { document.getElementById('hall-of-fame-modal').style.display = 'none'; });
+            document.getElementById('close-glossary-btn').addEventListener('click', () => { document.getElementById('glossary-modal').style.display = 'none'; });
+            document.getElementById('close-history-btn').addEventListener('click', () => { document.getElementById('history-modal').style.display = 'none'; });
         }
 
         function prepareLevel() {
@@ -786,6 +875,9 @@
         function countdown() {
             gameState.timer--;
             updateUI();
+             if (gameState.timer <= 10 && gameState.timer > 0) {
+                sounds.tick.triggerAttackRelease("C5", "32n");
+            }
             if (gameState.timer <= 0) {
                 levelLose("Ficaste sem tempo!");
             }
@@ -873,6 +965,7 @@
         }
 
         function renderBoard() {
+            if (!gameBoard) return;
             gameBoard.innerHTML = '';
             gameState.board.forEach((row, r) => {
                 row.forEach((gemData, c) => {
@@ -1214,6 +1307,7 @@
             // Caso 1: Bomba de Cor + Bomba de Cor
             if (types[0] === 'color-bomb' && types[1] === 'color-bomb') {
                 showSuperIconPopup('color-bomb-clear');
+                await animateBoardClear(r2, c2); // Animação de limpeza
                 for (let r = 0; r < levelConfig.rows; r++) {
                     for (let c = 0; c < levelConfig.cols; c++) {
                         if (gameState.board[r][c] !== null) {
@@ -1385,6 +1479,15 @@
             sounds.win.triggerAttackRelease(["E4", "G4", "C5", "E5"], "8n", now + 0.2);
             sounds.win.triggerAttackRelease(["G4", "C5", "E5", "G5"], "8n", now + 0.4);
 
+            const factModal = document.getElementById('sabia-que-modal');
+            const randomFact = ENERGY_FACTS[Math.floor(Math.random() * ENERGY_FACTS.length)];
+            document.getElementById('sabia-que-fact').textContent = randomFact;
+            factModal.style.display = 'flex';
+        }
+
+        async function showLevelCompleteModal() {
+            document.getElementById('sabia-que-modal').style.display = 'none';
+
             const modal = document.getElementById('level-complete-modal');
             const levelConfig = LEVELS[gameState.currentLevel];
             const character = levelConfig.character;
@@ -1481,11 +1584,19 @@
 
             if (gameState.lives > 0) {
                 const retryBtn = document.createElement('button');
-                retryBtn.id = 'retry-level-btn-lose';
                 retryBtn.className = 'bg-white text-red-600 font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105';
                 retryBtn.textContent = 'Tentar Novamente';
                 retryBtn.addEventListener('click', () => { document.getElementById('game-over-modal').style.display = 'none'; prepareLevel(); });
                 buttonsContainer.appendChild(retryBtn);
+
+                const backBtn = document.createElement('button');
+                backBtn.className = 'bg-gray-700 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-full text-lg';
+                backBtn.textContent = 'Voltar ao Mapa';
+                backBtn.addEventListener('click', () => {
+                    document.getElementById('game-over-modal').style.display = 'none';
+                    renderWorldMap(Math.floor(gameState.currentLevel / 10));
+                });
+                buttonsContainer.appendChild(backBtn);
             } else {
                  document.getElementById('game-over-message').textContent = `Ficaste sem vidas! Ganha mais vidas ou espera 1 hora por cada vida nova (máx. 5).`;
                 const socialLinks = [
@@ -1761,6 +1872,24 @@
             }
             requestAnimationFrame(animationStep);
         }
+
+        async function animateBoardClear(r, c) {
+            const animationLayer = document.getElementById('animation-layer');
+            const ripple = document.createElement('div');
+            ripple.className = 'board-clear-ripple';
+            
+            // Posição da ondulação baseada na posição do clique
+            const gemSize = gameBoard.firstChild.offsetWidth;
+            const gap = 4;
+            const top = (r + 0.5) * (gemSize + gap);
+            const left = (c + 0.5) * (gemSize + gap);
+            ripple.style.top = `${top}px`;
+            ripple.style.left = `${left}px`;
+            
+            animationLayer.appendChild(ripple);
+            await delay(700);
+            ripple.remove();
+        }
         
         // --- RENDERIZAÇÃO DE ECRÃS ---
         function renderMainMenu(user) {
@@ -1791,8 +1920,10 @@
                     renderWorldMap(0);
                 });
             }
-            // Lógica do botão Hall of Fame
+            // Lógica dos botões do menu
             document.getElementById('hall-of-fame-btn').addEventListener('click', showHallOfFame);
+            document.getElementById('glossary-btn').addEventListener('click', showGlossary);
+            document.getElementById('history-btn').addEventListener('click', showHistory);
             updateUI();
         }
 
@@ -2060,9 +2191,73 @@
                 content.innerHTML = '<p class="text-center text-red-500">Não foi possível carregar o ranking. Tenta mais tarde.</p>';
             }
         }
+        
+        function showGlossary() {
+            const modal = document.getElementById('glossary-modal');
+            const content = document.getElementById('glossary-content');
+            content.innerHTML = ''; // Limpa conteúdo anterior
+
+            ENERGY_GLOSSARY.forEach(item => {
+                const entry = document.createElement('div');
+                entry.className = 'flex items-start gap-4 p-2 bg-gray-900 rounded-lg';
+                entry.innerHTML = `
+                    <div class="w-12 h-12 flex-shrink-0">${item.icon}</div>
+                    <div>
+                        <h3 class="font-bold text-lg text-purple-400">${item.name}</h3>
+                        <p class="text-sm text-gray-300">${item.description}</p>
+                    </div>
+                `;
+                content.appendChild(entry);
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        function showHistory() {
+            const modal = document.getElementById('history-modal');
+            const content = document.getElementById('history-content');
+            
+            const heroesSection = content.querySelector('#heroes-section');
+            const villainsSection = content.querySelector('#villains-section');
+            
+            heroesSection.innerHTML = '<h3 class="text-2xl font-bold text-green-400 mt-6">Os Heróis</h3>';
+            villainsSection.innerHTML = '<h3 class="text-2xl font-bold text-red-400 mt-6">Os Vilões</h3>';
+
+            HEROES.forEach(hero => {
+                const entry = document.createElement('div');
+                entry.className = 'flex items-start gap-4 p-2 bg-gray-900 rounded-lg mt-2';
+                entry.innerHTML = `
+                    <img src="${hero.img}" class="w-16 h-16 rounded-full border-2 border-green-400 flex-shrink-0">
+                    <div>
+                        <h4 class="font-bold text-lg text-yellow-300">${hero.name}</h4>
+                        <p class="text-sm text-gray-300">${hero.description}</p>
+                    </div>
+                `;
+                heroesSection.appendChild(entry);
+            });
+
+            VILLAINS.forEach(villain => {
+                const entry = document.createElement('div');
+                entry.className = 'flex items-start gap-4 p-2 bg-gray-900 rounded-lg mt-2';
+                entry.innerHTML = `
+                    <img src="${villain.img}" class="w-16 h-16 rounded-full border-2 border-red-400 flex-shrink-0">
+                    <div>
+                        <h4 class="font-bold text-lg text-yellow-300">${villain.name}</h4>
+                        <p class="text-sm text-gray-300">${villain.description}</p>
+                    </div>
+                `;
+                villainsSection.appendChild(entry);
+            });
+
+            modal.style.display = 'flex';
+        }
 
         window.onload = () => {
-            document.body.addEventListener('click', () => Tone.start(), { once: true });
+            document.body.addEventListener('click', () => {
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+            }, { once: true });
             init();
         };
 
