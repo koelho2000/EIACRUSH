@@ -53,6 +53,21 @@
                 0 5px 10px rgba(0, 0, 0, 0.5),
                 0 0 0 4px white;
         }
+        .gem.is-locked::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M25,50 L75,50 M50,25 L50,75" stroke="%23FFFFFF" stroke-width="10" stroke-linecap="round" transform="rotate(45 50 50)"/></svg>');
+            background-size: 60%;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.7;
+        }
+        .hole {
+            background: transparent;
+            box-shadow: none;
+            border: none;
+        }
         /* Estilos para Super Ícones */
         .gem.super-striped-h::after, .gem.super-striped-v::after {
             content: '';
@@ -291,6 +306,7 @@
             <div id="level-grid" class="grid grid-cols-5 gap-4 p-4 bg-gray-800 rounded-lg w-full max-w-md h-64 overflow-y-auto">
                 <!-- Os nós dos níveis serão inseridos aqui -->
             </div>
+            <div id="final-level-container" class="mt-4"></div>
             <div class="flex gap-4 mt-6">
                 <button id="back-to-main-menu-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full text-lg">Menu Principal</button>
                 <button id="unlock-btn" class="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-2 px-6 rounded-full text-lg">Desbloquear</button>
@@ -389,6 +405,13 @@
         </div>
     </div>
     
+    <!-- Modal de Fim de Mundo (Vídeo) -->
+    <div id="world-complete-video-modal" class="modal bg-black">
+        <div class="modal-content w-full max-w-4xl aspect-video">
+            <video id="world-complete-video-player" class="w-full h-full" controls autoplay playsinline></video>
+        </div>
+    </div>
+
     <!-- Modal de Introdução ao Nível Bónus -->
     <div id="bonus-level-modal" class="modal">
         <div class="modal-content bg-yellow-500 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4">
@@ -552,12 +575,17 @@
     
     <!-- Modal Hall of Fame -->
     <div id="hall-of-fame-modal" class="modal">
-        <div class="modal-content bg-gray-800 p-6 rounded-2xl shadow-2xl text-left max-w-lg w-11/12 mx-4 relative">
-            <h2 class="text-3xl font-bold mb-4 text-center text-yellow-400">Hall of Fame</h2>
-            <button id="close-hof-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">X</button>
-            <div id="hall-of-fame-content" class="space-y-2 max-h-[70vh] overflow-y-auto pr-2">
-                <!-- O ranking será inserido aqui -->
-                <p class="text-center">A carregar o ranking...</p>
+        <div class="modal-content bg-gray-900 p-4 rounded-2xl shadow-2xl text-left max-w-3xl w-11/12 mx-4 relative flex gap-4">
+            <button id="close-hof-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl z-10">X</button>
+            <div id="hof-sidebar" class="w-1/3 bg-gray-800 p-2 rounded-lg flex flex-col gap-2">
+                <!-- Sidebar com categorias será gerada aqui -->
+            </div>
+            <div class="w-2/3 flex flex-col">
+                 <h2 id="hof-title" class="text-3xl font-bold mb-4 text-center text-yellow-400">Hall of Fame</h2>
+                <div id="hall-of-fame-content" class="space-y-2 max-h-[60vh] overflow-y-auto pr-2 flex-grow">
+                    <!-- O ranking será inserido aqui -->
+                    <p class="text-center">A carregar o ranking...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -614,11 +642,13 @@
         let gameBoard, scoreDisplay, movesDisplay, levelDisplay, characterNameDisplay, targetScoreDisplay, menuLivesDisplay, gameLivesDisplay, menuTotalScoreDisplay, mapTotalScoreDisplay, gameTotalScoreDisplay;
         let musicPlayer;
         let isMuted = false;
+        let levelStartTime = null;
 
         const HEROES = [
             { 
                 name: 'Sunny', color: 'yellow', img: 'https://placehold.co/150x150/f59e0b/ffffff?text=S', 
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Sunny%5BRise&Shine%5D%23EIA.mp3",
+                video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Sunny%20World%20Complete.mp4",
                 description: 'Sunny é a personificação da energia solar. Sempre otimista, irradia calor e positividade, iluminando o caminho para um futuro mais limpo.',
                 messages: [
                     "Energia limpa a brilhar!", "Um passo de cada vez!", "A eficiência é a chave!",
@@ -629,6 +659,7 @@
             { 
                 name: 'Breezy', color: 'blue', img: 'https://placehold.co/150x150/60a5fa/ffffff?text=B', 
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Ride%20the%20Wind%20-%20Breezy's%20Song.mp3",
+                video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Breezzy%20World%20Complete.mp4",
                 description: 'Breezy comanda a força dos ventos. É ágil, rápido e livre, representando o poder imparável da energia eólica para mover o mundo.',
                 messages: [
                     "Sente a força do vento!", "Uma brisa de vitória!", "Leve como o ar!",
@@ -639,6 +670,7 @@
             { 
                 name: 'Splashy', color: 'indigo', img: 'https://placehold.co/150x150/4f46e5/ffffff?text=S', 
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Make%20a%20Splash!%20-%20Splashy%E2%80%99s%20Song.mp3",
+                video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Splashy%20World%20Complete.mp4",
                 description: 'Splashy representa a energia hídrica. Calmo mas poderoso, a sua força reside na constância e na capacidade de se adaptar e fluir.',
                 messages: [
                     "Um mar de pontos!", "A fluir para a vitória!", "Puro como a água!",
@@ -651,13 +683,24 @@
         const VILLAINS = [
             { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O', 
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Fuel%20the%20Fire%20-%20Oily's%20Song.mp3", 
+            video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Oily%20World%20Complete.mp4",
             description: 'Oily é o barão do petróleo. Astuto e escorregadio, ele tenta manter o mundo preso ao passado, sujando tudo à sua volta.', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
             { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S', 
-            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%5BBurning-Strong%5D%23EIA.mp3", description: 'Smokey é a personificação da poluição do carvão. Deixa um rasto de fumo e cinza por onde passa, obscurecendo o futuro.', message: "O meu fumo vai-te deixar a tossir!" },
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%5BBurning-Strong%5D%23EIA.mp3", 
+            video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%20World%20Complete.mp4",
+            description: 'Smokey é a personificação da poluição do carvão. Deixa um rasto de fumo e cinza por onde passa, obscurecendo o futuro.', message: "O meu fumo vai-te deixar a tossir!" },
             { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G', 
-            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Zoom,%20Boom,%20Whoosh!%20-%20Gassy%E2%80%99s%20Song.mp3", description: 'Gassy representa os gases de efeito estufa. É volátil e traiçoeiro, sempre a tentar aquecer o planeta com as suas emissões.', message: "Não vais conseguir aguentar este cheiro a derrota!" },
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Zoom,%20Boom,%20Whoosh!%20-%20Gassy%E2%80%99s%20Song.mp3", 
+            video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Gassy%20World%20Complete.mp4",
+            description: 'Gassy representa os gases de efeito estufa. É volátil e traiçoeiro, sempre a tentar aquecer o planeta com as suas emissões.', message: "Não vais conseguir aguentar este cheiro a derrota!" },
         ];
         
+        const FINAL_BOSS = {
+            name: 'EIA Master', color: 'purple', img: 'https://placehold.co/150x150/a855f7/ffffff?text=EIA',
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Energy%20in%20Action%20-%20song%20theme.mp3",
+            video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/NIvelFinal.mp4"
+        };
+
         const worldCharacters = [
             HEROES[0], HEROES[1], HEROES[2],
             VILLAINS[0], VILLAINS[1], VILLAINS[2]
@@ -718,16 +761,40 @@
             };
 
             if (isTimedLevel) {
-                config.time = 90;
+                config.time = 180;
                 delete config.moves;
             }
             if (isBossLevel) {
-                config.time = 60;
+                config.time = 120;
                 config.autoReshuffle = 10000; // 10 segundos
                 delete config.moves;
             }
 
             return config;
+        });
+
+        // Nível Final 61
+        LEVELS.push({
+            level: 61,
+            rows: 10,
+            cols: 10,
+            targetScore: 50000,
+            time: 360,
+            character: FINAL_BOSS,
+            isBoss: true,
+            autoReshuffle: 30000,
+            layout: [
+                "X L X X X X X X L X",
+                "L X X X X X X X X L",
+                "X X L X X X X L X X",
+                "X X X X X X X X X X",
+                "X X X X L L X X X X",
+                "X X X X L L X X X X",
+                "X X X X X X X X X X",
+                "X X L X X X X L X X",
+                "L X X X X X X X X L",
+                "X L X X X X X X L X"
+            ]
         });
 
         // --- ESTADO DO JOGO ---
@@ -750,7 +817,9 @@
                 tiktok: false,
                 instagram: false,
                 youtube: false
-            }
+            },
+            stats: {},
+            totalPlayTimeMinutes: 0
         };
         
         // --- SONS DO JOGO ---
@@ -853,7 +922,14 @@
             document.getElementById('continue-to-score-btn').addEventListener('click', showLevelCompleteModal);
             document.getElementById('next-level-btn').addEventListener('click', () => { 
                 document.getElementById('level-complete-modal').style.display = 'none'; 
-                renderWorldMap(Math.floor(gameState.currentLevel / 10)); 
+                const levelConfig = LEVELS[gameState.currentLevel];
+                if (levelConfig.level === 60) {
+                    gameState.currentLevel = 60; // index do nivel 61
+                    renderGameScreen();
+                    prepareLevel();
+                } else {
+                    renderWorldMap(Math.floor(gameState.currentLevel / 10)); 
+                }
             });
             document.getElementById('start-bonus-btn').addEventListener('click', async () => { 
                 document.getElementById('bonus-level-modal').style.display = 'none'; 
@@ -913,6 +989,7 @@
         }
 
         async function startGame() {
+            levelStartTime = Date.now();
             const levelConfig = LEVELS[gameState.currentLevel];
             gameState.score = 0;
             gameState.moves = levelConfig.moves || 0;
@@ -932,6 +1009,15 @@
             updateUI();
             await createBoard();
             resetHintTimer();
+        }
+
+        function endLevelPlaytime() {
+            if (levelStartTime) {
+                const elapsedMilliseconds = Date.now() - levelStartTime;
+                const elapsedMinutes = elapsedMilliseconds / 1000 / 60;
+                gameState.totalPlayTimeMinutes += elapsedMinutes;
+                levelStartTime = null; // Reset timer
+            }
         }
         
         function autoReshuffleLoop() {
@@ -996,7 +1082,7 @@
                 }
                 
                 const gameContainer = document.getElementById('game-container');
-                const colorMap = { yellow: '#f59e0b', blue: '#3b82f6', indigo: '#4f46e5', gray: '#4b5563', orange: '#f97316', lime: '#84cc16' };
+                const colorMap = { yellow: '#f59e0b', blue: '#3b82f6', indigo: '#4f46e5', gray: '#4b5563', orange: '#f97316', lime: '#84cc16', purple: '#a855f7' };
                 if (gameContainer) {
                     gameContainer.style.background = `radial-gradient(circle, ${colorMap[character.color]} 0%, #111827 100%)`;
                 }
@@ -1005,7 +1091,7 @@
 
         async function createBoard() {
             const levelConfig = LEVELS[gameState.currentLevel];
-            const { rows, cols } = levelConfig;
+            const { rows, cols, layout } = levelConfig;
             gameState.board = [];
             gameBoard.innerHTML = '';
             gameBoard.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -1013,20 +1099,42 @@
             
             let attempts = 0;
             do {
-                gameState.board = [];
-                for (let r = 0; r < rows; r++) {
-                    const row = []; 
-                    for (let c = 0; c < cols; c++) {
-                        let type;
-                        do {
-                            type = Math.floor(Math.random() * (ICONS.length - 1));
-                        } while (
-                            (c >= 2 && type === row[c - 1]?.type && type === row[c - 2]?.type) ||
-                            (r >= 2 && type === gameState.board[r - 1]?.[c]?.type && type === gameState.board[r - 2]?.[c]?.type)
-                        );
-                        row.push({ type, superType: null });
+                gameState.board = []; // Reset board on each attempt
+                if (layout) {
+                    for (let r = 0; r < rows; r++) {
+                        const row = [];
+                        for (let c = 0; c < cols; c++) {
+                            const char = layout[r][c];
+                            if (char === ' ') {
+                                row.push(null);
+                            } else {
+                                let type;
+                                do {
+                                    type = Math.floor(Math.random() * (ICONS.length - 1));
+                                } while (
+                                    (c >= 2 && type === row[c - 1]?.type && type === row[c - 2]?.type) ||
+                                    (r >= 2 && type === gameState.board[r - 1]?.[c]?.type && type === gameState.board[r - 2]?.[c]?.type)
+                                );
+                                row.push({ type, superType: null, isLocked: char === 'L' });
+                            }
+                        }
+                        gameState.board.push(row);
                     }
-                    gameState.board.push(row);
+                } else {
+                    for (let r = 0; r < rows; r++) {
+                        const row = []; 
+                        for (let c = 0; c < cols; c++) {
+                            let type;
+                            do {
+                                type = Math.floor(Math.random() * (ICONS.length - 1));
+                            } while (
+                                (c >= 2 && type === row[c - 1]?.type && type === row[c - 2]?.type) ||
+                                (r >= 2 && type === gameState.board[r - 1]?.[c]?.type && type === gameState.board[r - 2]?.[c]?.type)
+                            );
+                            row.push({ type, superType: null });
+                        }
+                        gameState.board.push(row);
+                    }
                 }
                 attempts++;
             } while ((findMatches().size > 0 || !checkForPossibleMoves()) && attempts < 20);
@@ -1040,18 +1148,23 @@
             gameBoard.innerHTML = '';
             gameState.board.forEach((row, r) => {
                 row.forEach((gemData, c) => {
+                    const cell = document.createElement('div');
                     if (gemData) {
-                        const gem = document.createElement('div');
-                        gem.classList.add('gem');
-                        gem.dataset.r = r;
-                        gem.dataset.c = c;
-                        gem.innerHTML = ICONS[gemData.type];
+                        cell.classList.add('gem');
+                        cell.dataset.r = r;
+                        cell.dataset.c = c;
+                        cell.innerHTML = ICONS[gemData.type];
                         if (gemData.superType) {
-                            gem.classList.add(`super-${gemData.superType}`);
+                            cell.classList.add(`super-${gemData.superType}`);
                         }
-                        gem.addEventListener('click', gemClick);
-                        gameBoard.appendChild(gem);
+                        if (gemData.isLocked) {
+                            cell.classList.add('is-locked');
+                        }
+                        cell.addEventListener('click', gemClick);
+                    } else {
+                        cell.classList.add('hole');
                     }
+                    gameBoard.appendChild(cell);
                 });
             });
         }
@@ -1063,12 +1176,16 @@
             resetHintTimer();
             const clickedGem = e.target.closest('.gem');
             if (!clickedGem) return;
+            
+            const r = parseInt(clickedGem.dataset.r);
+            const c = parseInt(clickedGem.dataset.c);
+            if (gameState.board[r][c]?.isLocked) return;
 
             if (gameState.selectedElement) {
                 const r1 = parseInt(gameState.selectedElement.dataset.r);
                 const c1 = parseInt(gameState.selectedElement.dataset.c);
-                const r2 = parseInt(clickedGem.dataset.r);
-                const c2 = parseInt(clickedGem.dataset.c);
+                const r2 = r;
+                const c2 = c;
 
                 gameState.selectedElement.classList.remove('is-selected');
 
@@ -1095,6 +1212,8 @@
         
         async function swap(r1, c1, r2, c2, isUndo = false) {
             if (gameState.isLocked && !isUndo) return;
+            if (gameState.board[r1][c1]?.isLocked || gameState.board[r2][c2]?.isLocked) return;
+
             gameState.isLocked = true;
             
             try {
@@ -1158,12 +1277,12 @@
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols - 2; c++) {
                     const gem1 = gameState.board[r][c];
-                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE) continue;
+                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE || gem1.isLocked) continue;
                     const gem2 = gameState.board[r][c + 1];
                     const gem3 = gameState.board[r][c + 2];
-                    if (gem2 && gem3 && gem1.type === gem2.type && gem2.type === gem3.type) {
+                    if (gem2 && gem3 && !gem2.isLocked && !gem3.isLocked && gem1.type === gem2.type && gem2.type === gem3.type) {
                         let i = c;
-                        while(i < cols && gameState.board[r][i]?.type === gem1.type) {
+                        while(i < cols && gameState.board[r][i]?.type === gem1.type && !gameState.board[r][i]?.isLocked) {
                             matches.add(`${r}-${i}`);
                             i++;
                         }
@@ -1173,12 +1292,12 @@
             for (let c = 0; c < cols; c++) {
                 for (let r = 0; r < rows - 2; r++) {
                     const gem1 = gameState.board[r][c];
-                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE) continue;
+                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE || gem1.isLocked) continue;
                     const gem2 = gameState.board[r + 1][c];
                     const gem3 = gameState.board[r + 2][c];
-                     if (gem2 && gem3 && gem1.type === gem2.type && gem2.type === gem3.type) {
+                     if (gem2 && gem3 && !gem2.isLocked && !gem3.isLocked && gem1.type === gem2.type && gem2.type === gem3.type) {
                         let i = r;
-                        while(i < rows && gameState.board[i][c]?.type === gem1.type) {
+                        while(i < rows && gameState.board[i][c]?.type === gem1.type && !gameState.board[i][c]?.isLocked) {
                             matches.add(`${i}-${c}`);
                             i++;
                         }
@@ -1288,6 +1407,7 @@
                     if (gemData) {
                        const type = superType === 'color-bomb' ? COLOR_BOMB_TYPE : gemData.type;
                        newSuperIcons.push({ r, c, type, superType });
+                       incrementStat(superType, gemData.type);
                        matchGroup.forEach(coord => allMatchedGems.add(coord));
                        allMatchedGems.delete(`${r}-${c}`);
                     }
@@ -1469,6 +1589,9 @@
 
         async function explodeGems(matches, chain, bonus = 0) {
             if (matches.size === 0) return 0;
+            
+            // Esta função agora destrói peças bloqueadas diretamente.
+            // A lógica de apenas desbloquear foi removida conforme a nova instrução.
             const points = (matches.size * 10 * chain) + bonus;
             
             const coords = Array.from(matches).map(c => c.split('-').map(Number));
@@ -1480,10 +1603,14 @@
             
             const pitch = Tone.Frequency("C4").transpose(chain - 1);
             sounds.match.triggerAttackRelease(pitch, '8n');
+            
             for (const coord of matches) {
                 const [r, c] = coord.split('-').map(Number);
                 const gemElement = document.querySelector(`.gem[data-r='${r}'][data-c='${c}']`);
-                if (gemElement) gemElement.classList.add('is-exploding');
+                if (gemElement) {
+                    gemElement.classList.remove('is-locked');
+                    gemElement.classList.add('is-exploding');
+                }
                 if (gameState.board[r]) gameState.board[r][c] = null;
             }
             await delay(500);
@@ -1541,6 +1668,7 @@
 
         async function levelWin() {
             gameState.isLocked = true;
+            endLevelPlaytime();
             clearTimeout(gameState.hintTimer);
             clearInterval(gameState.timerInterval);
             clearTimeout(gameState.autoReshuffleInterval);
@@ -1602,6 +1730,44 @@
                 gameState.lives++;
             }
             saveGameData();
+
+            // Lógica para o vídeo de fim de mundo
+            if (levelConfig.isBoss && character.video) {
+                document.getElementById('next-level-btn').classList.add('hidden'); // Esconde o botão
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    playWorldCompleteVideo(character.video);
+                }, 2500);
+            } else {
+                const nextLevelBtn = document.getElementById('next-level-btn');
+                nextLevelBtn.classList.remove('hidden');
+                if (levelConfig.level === 60) {
+                    nextLevelBtn.textContent = "Desafio Final!";
+                } else {
+                    nextLevelBtn.textContent = "Próximo Nível";
+                }
+            }
+        }
+
+        function playWorldCompleteVideo(videoSrc) {
+            const videoModal = document.getElementById('world-complete-video-modal');
+            const videoPlayer = document.getElementById('world-complete-video-player');
+            stopMusic();
+            videoPlayer.src = videoSrc;
+            videoModal.style.display = 'flex';
+
+            videoPlayer.onended = () => {
+                setTimeout(() => {
+                    videoModal.style.display = 'none';
+                    videoPlayer.src = ''; // Limpa a fonte
+                    const nextWorldIndex = Math.floor(gameState.currentLevel / 10) + 1;
+                    if (nextWorldIndex < worldCharacters.length) {
+                        renderWorldMap(nextWorldIndex);
+                    } else {
+                        renderMainMenu(auth.currentUser); // Fim do jogo
+                    }
+                }, 2500);
+            };
         }
 
         async function animateFinalScore() {
@@ -1628,13 +1794,14 @@
             }
         }
 
-        function levelLose(message = "Ficaste sem movimentos. Perdeste uma vida!") {
+        function levelLose(message = "Ficaste sem jogadas!") {
             gameState.isLocked = true;
+            endLevelPlaytime();
             clearTimeout(gameState.hintTimer);
             clearInterval(gameState.timerInterval);
             clearTimeout(gameState.autoReshuffleInterval);
 
-            gameState.lives--;
+            gameState.lives = Math.max(0, gameState.lives - 1); // Garante que as vidas não ficam negativas
             if (gameState.lives <= 0 && !gameState.livesOutTimestamp) {
                 gameState.livesOutTimestamp = Date.now();
             }
@@ -1669,7 +1836,7 @@
                 });
                 buttonsContainer.appendChild(backBtn);
             } else {
-                 document.getElementById('game-over-message').textContent = `Ficaste sem vidas! Ganha mais vidas ou espera 1 hora por cada vida nova (máx. 5).`;
+                 document.getElementById('game-over-message').textContent = `Ficaste sem vidas! Ganha mais vidas ou espera 6 horas por cada vida nova (máx. 5).`;
                 const socialLinks = [
                     { platform: 'tiktok', text: 'TikTok (+5 Vidas)', url: 'https://www.tiktok.com/@koelho2000' },
                     { platform: 'instagram', text: 'Instagram (+5 Vidas)', url: 'https://www.instagram.com/eia_energyinaction/' },
@@ -1705,13 +1872,28 @@
         }
         
         function claimSocialLives(platform) {
-            if (!gameState.socialClaims[platform]) {
-                gameState.lives += 5;
-                gameState.socialClaims[platform] = true;
-                saveGameData();
+            if (gameState.socialClaims[platform]) return;
+
+            gameState.socialClaims[platform] = true;
+            let livesAdded = false;
+
+            if (gameState.lives < 5) {
+                gameState.lives = Math.min(5, gameState.lives + 5);
+                if (gameState.lives >= 5) {
+                    gameState.livesOutTimestamp = null;
+                }
+                livesAdded = true;
+            }
+            
+            saveGameData(); // Save state regardless
+
+            if (livesAdded) {
                 showBonusPopup("+5 Vidas!");
-                // Atualizar o modal de game over para permitir tentar novamente
-                levelLose("Ganhastes 5 vidas!");
+                levelLose("Ganhastes 5 vidas!"); // Rebuild modal with new state
+            } else {
+                showBonusPopup("Já tens 5 ou mais vidas!");
+                // Rebuild modal to show the button as disabled
+                levelLose("Já tens vidas suficientes!");
             }
         }
 
@@ -1747,8 +1929,10 @@
             const levelConfig = LEVELS[gameState.currentLevel];
             for (let r = 0; r < levelConfig.rows; r++) {
                 for (let c = 0; c < levelConfig.cols; c++) {
-                    if (c < levelConfig.cols - 1 && wouldMatch(r, c, r, c + 1)) return [{r,c}, {r, c:c+1}];
-                    if (r < levelConfig.rows - 1 && wouldMatch(r, c, r + 1, c)) return [{r,c}, {r:r+1, c}];
+                    if (gameState.board[r][c] && !gameState.board[r][c].isLocked) {
+                        if (c < levelConfig.cols - 1 && gameState.board[r][c+1] && !gameState.board[r][c+1].isLocked && wouldMatch(r, c, r, c + 1)) return [{r,c}, {r, c:c+1}];
+                        if (r < levelConfig.rows - 1 && gameState.board[r+1][c] && !gameState.board[r+1][c].isLocked && wouldMatch(r, c, r + 1, c)) return [{r,c}, {r:r+1, c}];
+                    }
                 }
             }
             return null;
@@ -1757,7 +1941,7 @@
         function wouldMatch(r1, c1, r2, c2) {
             if (!gameState.board[r1] || !gameState.board[r1][c1] || !gameState.board[r2] || !gameState.board[r2][c2]) return false;
             
-            const boardCopy = gameState.board.map(row => row.map(gem => ({...gem})));
+            const boardCopy = gameState.board.map(row => row.map(gem => (gem ? {...gem} : null)));
 
             const temp = boardCopy[r1][c1];
             boardCopy[r1][c1] = boardCopy[r2][c2];
@@ -1789,7 +1973,7 @@
             let attempts = 0;
             do {
                 // Pega todas as peças do tabuleiro e baralha-as
-                let flatBoard = gameState.board.flat().filter(Boolean);
+                let flatBoard = gameState.board.flat().filter(gem => gem && !gem.isLocked);
                 for (let i = flatBoard.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [flatBoard[i], flatBoard[j]] = [flatBoard[j], flatBoard[i]];
@@ -1799,7 +1983,9 @@
                 let flatIndex = 0;
                 for (let r = 0; r < levelConfig.rows; r++) {
                     for (let c = 0; c < levelConfig.cols; c++) {
-                        gameState.board[r][c] = flatBoard[flatIndex++];
+                        if (gameState.board[r][c] && !gameState.board[r][c].isLocked) {
+                            gameState.board[r][c] = flatBoard[flatIndex++];
+                        }
                     }
                 }
                 attempts++;
@@ -1826,7 +2012,9 @@
                 highestLevel: gameState.highestLevel,
                 livesOutTimestamp: gameState.livesOutTimestamp,
                 totalScore: gameState.totalScore,
-                socialClaims: gameState.socialClaims
+                socialClaims: gameState.socialClaims,
+                stats: gameState.stats, // Adiciona as estatísticas
+                totalPlayTimeMinutes: gameState.totalPlayTimeMinutes
             };
             if (user) {
                 const userDocRef = doc(db, "users", user.uid);
@@ -1836,7 +2024,9 @@
                 const leaderboardData = {
                     name: user.displayName,
                     totalScore: gameState.totalScore,
-                    highestLevel: gameState.highestLevel + 1 // Mostra o nível atual, não o último completado
+                    highestLevel: gameState.highestLevel + 1, // Mostra o nível atual, não o último completado
+                    stats: gameState.stats, // Adiciona estatísticas ao leaderboard
+                    totalPlayTimeMinutes: gameState.totalPlayTimeMinutes
                 };
                 await setDoc(leaderboardDocRef, leaderboardData, { merge: true });
             } else {
@@ -1845,7 +2035,7 @@
         }
 
         async function loadGameData(userId) {
-            const ONE_HOUR = 60 * 60 * 1000;
+            const SIX_HOURS = 6 * 60 * 60 * 1000;
             let data;
             if (userId) {
                 const userDocRef = doc(db, "users", userId);
@@ -1863,17 +2053,19 @@
                 gameState.lives = data.lives !== undefined ? data.lives : 5;
                 gameState.livesOutTimestamp = data.livesOutTimestamp || null;
                 gameState.socialClaims = data.socialClaims || { tiktok: false, instagram: false, youtube: false };
+                gameState.stats = data.stats || initializeStatsObject(); // Carrega ou inicializa as estatísticas
+                gameState.totalPlayTimeMinutes = data.totalPlayTimeMinutes || 0;
 
                 if (gameState.lives < 5 && gameState.livesOutTimestamp) {
                     const timePassed = Date.now() - gameState.livesOutTimestamp;
-                    const livesGained = Math.floor(timePassed / ONE_HOUR);
+                    const livesGained = Math.floor(timePassed / SIX_HOURS);
                     
                     if (livesGained > 0) {
                         gameState.lives = Math.min(5, gameState.lives + livesGained);
                         if (gameState.lives >= 5) {
                             gameState.livesOutTimestamp = null;
                         } else {
-                             gameState.livesOutTimestamp += livesGained * ONE_HOUR;
+                             gameState.livesOutTimestamp += livesGained * SIX_HOURS;
                         }
                         if(auth.currentUser) await saveGameData();
                     }
@@ -1882,6 +2074,9 @@
                 resetLocalGameState();
                 if (userId) await saveGameData(); // Cria o documento para o novo utilizador
             }
+            
+            // Verifica e reinicia as estatísticas periódicas
+            checkAndResetStats();
         }
 
         function resetLocalGameState() {
@@ -1898,8 +2093,86 @@
             gameState.highestLevel = 0;
             gameState.livesOutTimestamp = null;
             gameState.socialClaims = { tiktok: false, instagram: false, youtube: false };
+            gameState.stats = initializeStatsObject();
+            gameState.totalPlayTimeMinutes = 0;
             localStorage.removeItem('eiaCrushGuestData');
         }
+
+        // --- LÓGICA DE ESTATÍSTICAS ---
+        function getStartOfDay(date) {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+        }
+
+        function getStartOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+            return new Date(d.setDate(diff)).setHours(0, 0, 0, 0);
+        }
+
+        function getStartOfMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+        }
+
+        function initializeStatsObject() {
+            const now = new Date();
+            const emptyCounts = {
+                striped: { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0 },
+                wrapped: 0,
+                colorBomb: 0
+            };
+            return {
+                daily: { timestamp: getStartOfDay(now), ...JSON.parse(JSON.stringify(emptyCounts)) },
+                weekly: { timestamp: getStartOfWeek(now), ...JSON.parse(JSON.stringify(emptyCounts)) },
+                monthly: { timestamp: getStartOfMonth(now), ...JSON.parse(JSON.stringify(emptyCounts)) },
+                total: JSON.parse(JSON.stringify(emptyCounts))
+            };
+        }
+
+        function checkAndResetStats() {
+            if (!gameState.stats || !gameState.stats.daily) {
+                gameState.stats = initializeStatsObject();
+            }
+            const now = new Date();
+            if (gameState.stats.daily.timestamp !== getStartOfDay(now)) {
+                gameState.stats.daily = { timestamp: getStartOfDay(now), ...initializeStatsObject().total };
+            }
+            if (gameState.stats.weekly.timestamp !== getStartOfWeek(now)) {
+                gameState.stats.weekly = { timestamp: getStartOfWeek(now), ...initializeStatsObject().total };
+            }
+            if (gameState.stats.monthly.timestamp !== getStartOfMonth(now)) {
+                gameState.stats.monthly = { timestamp: getStartOfMonth(now), ...initializeStatsObject().total };
+            }
+        }
+
+        function incrementStat(superType, gemType) {
+            if (!auth.currentUser || !gameState.stats) return; // Só regista para utilizadores com login
+            
+            let statKey;
+            let isStriped = false;
+            if (superType.startsWith('striped')) {
+                statKey = 'striped';
+                isStriped = true;
+            } else if (superType === 'wrapped') {
+                statKey = 'wrapped';
+            } else if (superType === 'color-bomb') {
+                statKey = 'colorBomb';
+            } else {
+                return; // Não é um tipo que queiramos registar
+            }
+
+            checkAndResetStats();
+
+            ['daily', 'weekly', 'monthly', 'total'].forEach(period => {
+                if (isStriped) {
+                    if (!gameState.stats[period][statKey]) gameState.stats[period][statKey] = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0 };
+                    gameState.stats[period][statKey][gemType] = (gameState.stats[period][statKey][gemType] || 0) + 1;
+                } else {
+                    gameState.stats[period][statKey] = (gameState.stats[period][statKey] || 0) + 1;
+                }
+            });
+        }
+
 
         // --- ANIMAÇÃO DE PONTOS ---
         function showPointsAnimation(amount, r, c, isSpecial = false) {
@@ -2000,6 +2273,10 @@
         }
 
         function renderWorldMap(worldIndex = 0) {
+            // Adiciona uma verificação para garantir que o worldIndex é válido
+            if (worldIndex >= worldCharacters.length) {
+                worldIndex = worldCharacters.length - 1;
+            }
             const worldMusic = worldCharacters[worldIndex].music;
             playMusic(worldMusic, 0.3);
 
@@ -2015,6 +2292,7 @@
             const backBtn = document.getElementById('back-to-main-menu-btn');
             const logoutBtn = document.getElementById('logout-btn');
             const unlockBtn = document.getElementById('unlock-btn');
+            const finalLevelContainer = document.getElementById('final-level-container');
 
             backBtn.addEventListener('click', () => renderMainMenu(auth.currentUser));
 
@@ -2068,6 +2346,19 @@
                     node.disabled = true;
                 }
                 levelGrid.appendChild(node);
+            }
+
+            if (gameState.highestLevel >= 60) {
+                const finalLevelBtn = document.createElement('button');
+                finalLevelBtn.textContent = 'Desafio Final - Nível 61';
+                finalLevelBtn.className = 'mt-4 bg-gradient-to-r from-purple-600 to-red-600 text-white font-bold py-3 px-8 rounded-full text-xl animate-pulse';
+                finalLevelBtn.addEventListener('click', () => {
+                    playMusic(FINAL_BOSS.music, 0.3);
+                    gameState.currentLevel = 60; // Index do nível 61
+                    renderGameScreen();
+                    prepareLevel();
+                });
+                finalLevelContainer.appendChild(finalLevelBtn);
             }
             
             unlockBtn.addEventListener('click', () => {
@@ -2134,6 +2425,7 @@
                 clearTimeout(gameState.hintTimer);
                 clearInterval(gameState.timerInterval);
                 clearTimeout(gameState.autoReshuffleInterval);
+                endLevelPlaytime();
                 stopMusic();
                 renderWorldMap(Math.floor(gameState.currentLevel / 10));
             });
@@ -2233,33 +2525,94 @@
 
         async function showHallOfFame() {
             const modal = document.getElementById('hall-of-fame-modal');
-            const content = document.getElementById('hall-of-fame-content');
+            const sidebar = document.getElementById('hof-sidebar');
             modal.style.display = 'flex';
+            sidebar.innerHTML = ''; // Limpar separadores anteriores
+
+            const categories = [
+                { name: 'Pontos', field: 'totalScore', icon: `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>` },
+                { name: 'Níveis', field: 'highestLevel', icon: `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>` },
+                { name: 'Horas de Jogo', field: 'totalPlayTimeMinutes', icon: `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>` },
+                { name: 'Peças Listadas', field: 'stats.total.striped', isSubcategory: true },
+                { name: 'Embrulhadas', field: 'stats.total.wrapped', icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-14L4 7m0 0v10l8 4m0-14L4 7"/></svg>` },
+                { name: 'Bombas de Cor', field: 'stats.total.colorBomb', icon: `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 5.293a1 1 0 011.414 0L10 8.586l3.293-3.293a1 1 0 111.414 1.414L11.414 10l3.293 3.293a1 1 0 01-1.414 1.414L10 11.414l-3.293 3.293a1 1 0 01-1.414-1.414L8.586 10 5.293 6.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>` }
+            ];
+
+            categories.forEach(cat => {
+                if (cat.isSubcategory) {
+                    const title = document.createElement('h3');
+                    title.className = 'text-lg font-bold text-purple-400 mt-2 px-2';
+                    title.textContent = cat.name;
+                    sidebar.appendChild(title);
+                    ICON_NAMES.forEach((name, index) => {
+                        const subcatTab = document.createElement('button');
+                        subcatTab.className = 'hof-tab flex items-center gap-2 w-full text-left px-2 py-2 rounded-md hover:bg-purple-500 transition-colors';
+                        subcatTab.dataset.field = `${cat.field}.${index}`;
+                        subcatTab.innerHTML = `<div class="w-6 h-6 flex-shrink-0">${ICONS[index]}</div><span>${name}</span>`;
+                        subcatTab.addEventListener('click', (e) => {
+                            document.querySelectorAll('.hof-tab').forEach(t => t.classList.remove('bg-purple-600'));
+                            e.currentTarget.classList.add('bg-purple-600');
+                            fetchAndDisplayRanking(`${cat.field}.${index}`);
+                        });
+                        sidebar.appendChild(subcatTab);
+                    });
+                } else {
+                    const tab = document.createElement('button');
+                    tab.className = 'hof-tab flex items-center gap-2 w-full text-left px-2 py-2 rounded-md hover:bg-purple-500 transition-colors';
+                    tab.dataset.field = cat.field;
+                    tab.innerHTML = `<div class="w-6 h-6 flex-shrink-0">${cat.icon}</div><span>${cat.name}</span>`;
+                    tab.addEventListener('click', (e) => {
+                        document.querySelectorAll('.hof-tab').forEach(t => t.classList.remove('bg-purple-600'));
+                        e.currentTarget.classList.add('bg-purple-600');
+                        fetchAndDisplayRanking(cat.field);
+                    });
+                    sidebar.appendChild(tab);
+                }
+            });
+
+            // Carregar a primeira categoria por defeito
+            sidebar.querySelector('.hof-tab').classList.add('bg-purple-600');
+            fetchAndDisplayRanking(categories[0].field);
+        }
+
+        async function fetchAndDisplayRanking(fieldPath) {
+            const content = document.getElementById('hall-of-fame-content');
+            document.getElementById('hof-title').textContent = document.querySelector(`.hof-tab[data-field="${fieldPath}"] span`).textContent;
             content.innerHTML = '<p class="text-center">A carregar o ranking...</p>';
 
             try {
                 const leaderboardRef = collection(db, "leaderboard");
-                const q = query(leaderboardRef, orderBy("totalScore", "desc"), limit(10));
+                const q = query(leaderboardRef, orderBy(fieldPath, "desc"), limit(10));
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
-                    content.innerHTML = '<p class="text-center">Ainda ninguém chegou ao Hall of Fame. Sê o primeiro!</p>';
+                    content.innerHTML = '<p class="text-center">Ainda ninguém se classificou nesta categoria.</p>';
                     return;
                 }
 
                 let rankHTML = '<ol class="list-decimal list-inside space-y-3">';
                 let rank = 1;
+
+                const getNestedValue = (obj, path) => path.split('.').reduce((acc, part) => acc && acc[part], obj);
+
                 querySnapshot.forEach((doc) => {
                     const player = doc.data();
                     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+                    let score = getNestedValue(player, fieldPath) || 0;
+                    let displayScore = score.toLocaleString();
+
+                    if (fieldPath === 'totalPlayTimeMinutes') {
+                        const hours = (score / 60).toFixed(1);
+                        displayScore = `${hours}h`;
+                    }
+                    
                     rankHTML += `
                         <li class="p-2 rounded-lg ${rank <= 3 ? 'bg-yellow-800' : 'bg-gray-700'} flex items-center">
                             <span class="font-bold text-lg mr-4 w-10 text-center">${medal}</span>
                             <div class="flex-grow">
                                 <span class="text-white text-xl">${player.name || 'Anónimo'}</span>
-                                <span class="block text-xs text-gray-300">Nível: ${player.highestLevel || 1}</span>
                             </div>
-                            <span class="font-bold text-yellow-400">${player.totalScore.toLocaleString()} pts</span>
+                            <span class="font-bold text-yellow-400">${displayScore}</span>
                         </li>
                     `;
                     rank++;
@@ -2268,7 +2621,7 @@
                 content.innerHTML = rankHTML;
 
             } catch (error) {
-                console.error("Erro ao carregar o Hall of Fame:", error);
+                console.error(`Erro ao carregar o Hall of Fame para ${fieldPath}:`, error);
                 content.innerHTML = '<p class="text-center text-red-500">Não foi possível carregar o ranking. Tenta mais tarde.</p>';
             }
         }
