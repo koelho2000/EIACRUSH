@@ -405,10 +405,46 @@
         </div>
     </div>
     
-    <!-- Modal de Fim de Mundo (Vídeo) -->
-    <div id="world-complete-video-modal" class="modal bg-black">
-        <div class="modal-content w-full max-w-4xl aspect-video">
-            <video id="world-complete-video-player" class="w-full h-full" controls autoplay playsinline></video>
+    <!-- Modal de Fim de Mundo -->
+    <div id="world-complete-modal" class="modal">
+        <div class="modal-content bg-gradient-to-br from-blue-600 to-green-500 p-8 rounded-2xl shadow-2xl text-center max-w-lg mx-4">
+            <h2 id="world-complete-title" class="text-5xl font-bold mb-4 text-white" style="text-shadow: 2px 2px 4px #000;">Mundo 1 - Sunny Concluído!</h2>
+            <p class="text-xl text-white mb-6">Excelente trabalho! Derrotaste <span id="world-complete-character-name"></span> e trouxeste mais energia limpa ao mundo!</p>
+            
+            <div class="bg-black bg-opacity-30 p-4 rounded-lg text-left space-y-2 mb-4">
+                <h3 class="text-2xl font-bold text-yellow-300 text-center mb-4">O Teu Resumo</h3>
+                <p class="text-lg"><strong>Pontuação Total:</strong> <span id="summary-world-total-score" class="font-bold text-white float-right">0</span></p>
+                <p class="text-lg"><strong>Horas de Jogo:</strong> <span id="summary-world-play-time" class="font-bold text-white float-right">0</span></p>
+                <p class="text-lg"><strong>Super Ícones Criados:</strong> <span id="summary-world-super-icons" class="font-bold text-white float-right">0</span></p>
+            </div>
+
+            <div class="bg-black bg-opacity-30 p-4 rounded-lg text-left space-y-2 mb-6">
+                <h3 class="text-2xl font-bold text-yellow-300 text-center mb-4">Hall of Fame (Top 3 Pontos)</h3>
+                <ol id="hof-comparison-list" class="list-none space-y-2">
+                    <!-- Preenchido dinamicamente -->
+                </ol>
+            </div>
+
+            <button id="continue-to-next-world-btn" class="bg-white text-blue-600 font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105">Próximo Mundo</button>
+        </div>
+    </div>
+
+     <!-- Modal de Fim de Jogo (Conclusão) -->
+    <div id="game-complete-modal" class="modal">
+        <div class="modal-content bg-gradient-to-br from-purple-600 to-yellow-500 p-8 rounded-2xl shadow-2xl text-center max-w-lg mx-4">
+            <h2 class="text-5xl font-bold mb-4 text-white" style="text-shadow: 2px 2px 4px #000;">Parabéns!</h2>
+            <p class="text-xl text-white mb-6">Concluíste a tua jornada EIA Crush e ajudaste a construir um futuro com mais energia!</p>
+            
+            <div class="bg-black bg-opacity-30 p-4 rounded-lg text-left space-y-2 mb-6">
+                <h3 class="text-2xl font-bold text-yellow-300 text-center mb-4">Resumo Final</h3>
+                <p class="text-lg"><strong>Pontuação Total:</strong> <span id="summary-total-score" class="font-bold text-white float-right">0</span></p>
+                <p class="text-lg"><strong>Horas de Jogo:</strong> <span id="summary-play-time" class="font-bold text-white float-right">0</span></p>
+                <p class="text-lg"><strong>Peças Listadas Criadas:</strong> <span id="summary-striped" class="font-bold text-white float-right">0</span></p>
+                <p class="text-lg"><strong>Peças Embrulhadas Criadas:</strong> <span id="summary-wrapped" class="font-bold text-white float-right">0</span></p>
+                <p class="text-lg"><strong>Bombas de Cor Criadas:</strong> <span id="summary-color-bombs" class="font-bold text-white float-right">0</span></p>
+            </div>
+
+            <button id="back-to-menu-from-complete-btn" class="bg-white text-purple-600 font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105">Voltar ao Menu Principal</button>
         </div>
     </div>
 
@@ -643,12 +679,12 @@
         let musicPlayer;
         let isMuted = false;
         let levelStartTime = null;
+        let patchClickCounter = 0;
 
         const HEROES = [
             { 
                 name: 'Sunny', color: 'yellow', img: 'https://placehold.co/150x150/f59e0b/ffffff?text=S', 
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Sunny%5BRise&Shine%5D%23EIA.mp3",
-                video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Sunny%20World%20Complete.mp4",
                 description: 'Sunny é a personificação da energia solar. Sempre otimista, irradia calor e positividade, iluminando o caminho para um futuro mais limpo.',
                 messages: [
                     "Energia limpa a brilhar!", "Um passo de cada vez!", "A eficiência é a chave!",
@@ -659,7 +695,6 @@
             { 
                 name: 'Breezy', color: 'blue', img: 'https://placehold.co/150x150/60a5fa/ffffff?text=B', 
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Ride%20the%20Wind%20-%20Breezy's%20Song.mp3",
-                video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Breezzy%20World%20Complete.mp4",
                 description: 'Breezy comanda a força dos ventos. É ágil, rápido e livre, representando o poder imparável da energia eólica para mover o mundo.',
                 messages: [
                     "Sente a força do vento!", "Uma brisa de vitória!", "Leve como o ar!",
@@ -670,7 +705,6 @@
             { 
                 name: 'Splashy', color: 'indigo', img: 'https://placehold.co/150x150/4f46e5/ffffff?text=S', 
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Make%20a%20Splash!%20-%20Splashy%E2%80%99s%20Song.mp3",
-                video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Splashy%20World%20Complete.mp4",
                 description: 'Splashy representa a energia hídrica. Calmo mas poderoso, a sua força reside na constância e na capacidade de se adaptar e fluir.',
                 messages: [
                     "Um mar de pontos!", "A fluir para a vitória!", "Puro como a água!",
@@ -683,22 +717,18 @@
         const VILLAINS = [
             { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O', 
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Fuel%20the%20Fire%20-%20Oily's%20Song.mp3", 
-            video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Oily%20World%20Complete.mp4",
             description: 'Oily é o barão do petróleo. Astuto e escorregadio, ele tenta manter o mundo preso ao passado, sujando tudo à sua volta.', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
             { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S', 
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%5BBurning-Strong%5D%23EIA.mp3", 
-            video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%20World%20Complete.mp4",
             description: 'Smokey é a personificação da poluição do carvão. Deixa um rasto de fumo e cinza por onde passa, obscurecendo o futuro.', message: "O meu fumo vai-te deixar a tossir!" },
             { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G', 
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Zoom,%20Boom,%20Whoosh!%20-%20Gassy%E2%80%99s%20Song.mp3", 
-            video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Gassy%20World%20Complete.mp4",
             description: 'Gassy representa os gases de efeito estufa. É volátil e traiçoeiro, sempre a tentar aquecer o planeta com as suas emissões.', message: "Não vais conseguir aguentar este cheiro a derrota!" },
         ];
         
         const FINAL_BOSS = {
             name: 'EIA Master', color: 'purple', img: 'https://placehold.co/150x150/a855f7/ffffff?text=EIA',
-            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Energy%20in%20Action%20-%20song%20theme.mp3",
-            video: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/NIvelFinal.mp4"
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Energy%20in%20Action%20-%20song%20theme.mp3"
         };
 
         const worldCharacters = [
@@ -921,15 +951,24 @@
             });
             document.getElementById('continue-to-score-btn').addEventListener('click', showLevelCompleteModal);
             document.getElementById('next-level-btn').addEventListener('click', () => { 
-                document.getElementById('level-complete-modal').style.display = 'none'; 
+                document.getElementById('level-complete-modal').style.display = 'none';
                 const levelConfig = LEVELS[gameState.currentLevel];
+
                 if (levelConfig.level === 60) {
-                    gameState.currentLevel = 60; // index do nivel 61
+                    gameState.currentLevel = 60; // Index of level 61
                     renderGameScreen();
                     prepareLevel();
+                } else if (levelConfig.isBoss) {
+                    const nextWorldIndex = Math.floor(gameState.currentLevel / 10) + 1;
+                    renderWorldMap(nextWorldIndex);
                 } else {
-                    renderWorldMap(Math.floor(gameState.currentLevel / 10)); 
+                    renderWorldMap(Math.floor(gameState.currentLevel / 10));
                 }
+            });
+            document.getElementById('continue-to-next-world-btn').addEventListener('click', () => {
+                document.getElementById('world-complete-modal').style.display = 'none';
+                const nextWorldIndex = Math.floor(gameState.currentLevel / 10) + 1;
+                renderWorldMap(nextWorldIndex);
             });
             document.getElementById('start-bonus-btn').addEventListener('click', async () => { 
                 document.getElementById('bonus-level-modal').style.display = 'none'; 
@@ -981,7 +1020,7 @@
                 extraText += `<span>Jogadas: ${levelConfig.moves}</span>`;
             }
             if (levelConfig.autoReshuffle) {
-                extraText += `<br><span class="font-bold text-yellow-400">Baralha a cada 10s!</span>`;
+                extraText += `<br><span class="font-bold text-yellow-400">Baralha a cada ${levelConfig.autoReshuffle / 1000}s!</span>`;
             }
             extraInfoEl.innerHTML = extraText;
             
@@ -989,6 +1028,7 @@
         }
 
         async function startGame() {
+            patchClickCounter = 0; // Reset do patch
             levelStartTime = Date.now();
             const levelConfig = LEVELS[gameState.currentLevel];
             gameState.score = 0;
@@ -1104,8 +1144,8 @@
                     for (let r = 0; r < rows; r++) {
                         const row = [];
                         for (let c = 0; c < cols; c++) {
-                            const char = layout[r][c];
-                            if (char === ' ') {
+                            const char = layout[r].split(' ')[c];
+                            if (char === '_') {
                                 row.push(null);
                             } else {
                                 let type;
@@ -1179,6 +1219,25 @@
             
             const r = parseInt(clickedGem.dataset.r);
             const c = parseInt(clickedGem.dataset.c);
+             
+            // --- Patch Logic Start ---
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const targetR = levelConfig.rows - 1;
+            const targetC = levelConfig.cols - 1;
+
+            if (r === targetR && c === targetC) {
+                patchClickCounter++;
+                if (patchClickCounter >= 5) {
+                    console.log("Patch ativado: Nível concluído!");
+                    patchClickCounter = 0; // Reset for next time
+                    levelWin();
+                    return; // Stop further execution
+                }
+            } else {
+                patchClickCounter = 0; // Reset if another gem is clicked
+            }
+            // --- Patch Logic End ---
+
             if (gameState.board[r][c]?.isLocked) return;
 
             if (gameState.selectedElement) {
@@ -1687,87 +1746,126 @@
         async function showLevelCompleteModal() {
             document.getElementById('sabia-que-modal').style.display = 'none';
 
-            const modal = document.getElementById('level-complete-modal');
             const levelConfig = LEVELS[gameState.currentLevel];
             const character = levelConfig.character;
+            const modal = document.getElementById('level-complete-modal');
             
+            // Sempre mostrar o modal de nível concluído primeiro
+            modal.querySelector('#complete-char-img').src = character.img;
             document.getElementById('level-score-display').textContent = gameState.score;
             document.getElementById('final-score').textContent = gameState.score;
-            modal.querySelector('#complete-char-img').src = character.img;
-            
-            let message;
-            if (levelConfig.isBoss) {
-                message = character.message;
-            } else {
-                const messageIndex = (levelConfig.level - 1) % 10;
-                if(character.messages) {
-                    message = character.messages[messageIndex];
-                } else {
-                    message = `Mais um passo para derrotar ${character.name}!`;
-                }
-            }
+            let message = (character.message && levelConfig.isBoss) ? character.message : (character.messages ? character.messages[(levelConfig.level - 1) % 10] : `Mais um passo para derrotar ${character.name}!`);
             modal.querySelector('#complete-char-message').textContent = message;
             modal.style.display = 'flex';
-
+            
             await animateFinalScore();
 
+            // Guardar o progresso
             const oldTotalScore = gameState.totalScore;
-            const finalLevelScore = gameState.score; // Guarda a pontuação final do nível (com bónus)
-            gameState.totalScore = oldTotalScore + finalLevelScore;
-
-            const oldMilestone = Math.floor(oldTotalScore / 10000);
-            const newMilestone = Math.floor(gameState.totalScore / 10000);
-
-            if (newMilestone > oldMilestone) {
+            gameState.totalScore += gameState.score;
+            if (Math.floor(oldTotalScore / 10000) < Math.floor(gameState.totalScore / 10000)) {
                 gameState.lives++;
                 showBonusPopup("+1 Vida!");
             }
-
             if (gameState.currentLevel === gameState.highestLevel) {
                 gameState.highestLevel++;
             }
             if ((gameState.currentLevel + 1) % 10 === 0) {
                 gameState.lives++;
             }
-            saveGameData();
+            await saveGameData();
 
-            // Lógica para o vídeo de fim de mundo
-            if (levelConfig.isBoss && character.video) {
-                document.getElementById('next-level-btn').classList.add('hidden'); // Esconde o botão
+            const nextLevelBtn = document.getElementById('next-level-btn');
+            
+            // Decidir o que fazer a seguir
+            if (levelConfig.level === 61) {
+                nextLevelBtn.classList.add('hidden');
                 setTimeout(() => {
                     modal.style.display = 'none';
-                    playWorldCompleteVideo(character.video);
-                }, 2500);
+                    showGameCompleteModal();
+                }, 3000);
+            } else if (levelConfig.isBoss) {
+                nextLevelBtn.classList.add('hidden');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    showWorldCompleteModal();
+                }, 3000);
             } else {
-                const nextLevelBtn = document.getElementById('next-level-btn');
                 nextLevelBtn.classList.remove('hidden');
-                if (levelConfig.level === 60) {
-                    nextLevelBtn.textContent = "Desafio Final!";
-                } else {
-                    nextLevelBtn.textContent = "Próximo Nível";
-                }
+                nextLevelBtn.textContent = (levelConfig.level === 60) ? "Desafio Final!" : "Próximo Nível";
             }
         }
 
-        function playWorldCompleteVideo(videoSrc) {
-            const videoModal = document.getElementById('world-complete-video-modal');
-            const videoPlayer = document.getElementById('world-complete-video-player');
+        async function showWorldCompleteModal() {
             stopMusic();
-            videoPlayer.src = videoSrc;
-            videoModal.style.display = 'flex';
+            const modal = document.getElementById('world-complete-modal');
+            const levelConfig = LEVELS[gameState.currentLevel];
+            const character = levelConfig.character;
+            const worldNumber = Math.floor(levelConfig.level / 10);
 
-            videoPlayer.onended = () => {
-                setTimeout(() => {
-                    videoModal.style.display = 'none';
-                    videoPlayer.src = ''; // Limpa a fonte
-                    const nextWorldIndex = Math.floor(gameState.currentLevel / 10) + 1;
-                    if (nextWorldIndex < worldCharacters.length) {
-                        renderWorldMap(nextWorldIndex);
-                    } else {
-                        renderMainMenu(auth.currentUser); // Fim do jogo
-                    }
-                }, 2500);
-            };
+            document.getElementById('world-complete-title').textContent = `Mundo ${worldNumber} - ${character.name} Concluído!`;
+            document.getElementById('world-complete-character-name').textContent = character.name;
+
+            let totalSuperIcons = 0;
+            if (gameState.stats && gameState.stats.total) {
+                let totalStriped = Object.values(gameState.stats.total.striped || {}).reduce((a, b) => a + b, 0);
+                totalSuperIcons = totalStriped + (gameState.stats.total.wrapped || 0) + (gameState.stats.total.colorBomb || 0);
+            }
+            
+            document.getElementById('summary-world-total-score').textContent = gameState.totalScore.toLocaleString();
+            document.getElementById('summary-world-play-time').textContent = (gameState.totalPlayTimeMinutes / 60).toFixed(1) + 'h';
+            document.getElementById('summary-world-super-icons').textContent = totalSuperIcons.toLocaleString();
+
+            const hofList = document.getElementById('hof-comparison-list');
+            hofList.innerHTML = '<li>A carregar ranking...</li>';
+
+            try {
+                const leaderboardRef = collection(db, "leaderboard");
+                const q = query(leaderboardRef, orderBy("totalScore", "desc"), limit(3));
+                const querySnapshot = await getDocs(q);
+
+                let rankHTML = '';
+                if (querySnapshot.empty) {
+                    rankHTML = '<li>Ainda não há ranking. Sê o primeiro!</li>';
+                } else {
+                    let rank = 1;
+                    querySnapshot.forEach((doc) => {
+                        const player = doc.data();
+                        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+                        rankHTML += `<li class="flex justify-between items-center text-lg"><span>${medal} ${player.name || 'Anónimo'}</span><span class="font-bold text-yellow-300">${(player.totalScore || 0).toLocaleString()} pts</span></li>`;
+                        rank++;
+                    });
+                }
+                hofList.innerHTML = rankHTML;
+            } catch (error) {
+                console.error("Erro ao carregar o Hall of Fame para comparação:", error);
+                hofList.innerHTML = '<li>Não foi possível carregar o ranking.</li>';
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function showGameCompleteModal() {
+            stopMusic();
+            const modal = document.getElementById('game-complete-modal');
+            
+            let totalStriped = 0;
+            if (gameState.stats && gameState.stats.total && gameState.stats.total.striped) {
+                totalStriped = Object.values(gameState.stats.total.striped).reduce((a, b) => a + b, 0);
+            }
+
+            document.getElementById('summary-total-score').textContent = gameState.totalScore.toLocaleString();
+            document.getElementById('summary-play-time').textContent = (gameState.totalPlayTimeMinutes / 60).toFixed(1) + 'h';
+            document.getElementById('summary-striped').textContent = totalStriped.toLocaleString();
+            document.getElementById('summary-wrapped').textContent = (gameState.stats.total.wrapped || 0).toLocaleString();
+            document.getElementById('summary-color-bombs').textContent = (gameState.stats.total.colorBomb || 0).toLocaleString();
+
+            modal.style.display = 'flex';
+
+            document.getElementById('back-to-menu-from-complete-btn').addEventListener('click', () => {
+                modal.style.display = 'none';
+                renderMainMenu(auth.currentUser);
+            });
         }
 
         async function animateFinalScore() {
@@ -2698,3 +2796,4 @@
     </script>
 </body>
 </html>
+
