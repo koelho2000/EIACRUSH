@@ -299,7 +299,13 @@
                  <h2 class="text-4xl font-bold">Mapa de Mundos</h2>
                  <button id="world-help-btn" class="absolute right-0 text-white bg-blue-500 hover:bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center font-bold text-2xl">?</button>
             </div>
-            <div class="text-xl font-bold mb-4">Pontuação Total: <span id="map-total-score-display">0</span></div>
+             <div class="text-center mb-4">
+                <div class="text-xl font-bold">Pontuação Total: <span id="map-total-score-display">0</span></div>
+                <div class="text-lg font-bold mt-1 flex items-center justify-center">
+                    <svg class="w-6 h-6 mr-2 text-yellow-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-5.5a1 1 0 11-2 0v-1a1 1 0 112 0v1zM10 6a1 1 0 011 1v3a1 1 0 11-2 0V7a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                    Moedas de Energia: <span id="map-energy-coins-display">0</span>
+                </div>
+            </div>
             <div id="world-tabs" class="flex flex-wrap justify-center gap-2 mb-4">
                 <!-- Tabs dos mundos serão inseridas aqui -->
             </div>
@@ -652,7 +658,8 @@
             query,
             orderBy,
             limit,
-            getDocs
+            getDocs,
+            where
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // #######################################################################
@@ -675,7 +682,7 @@
         
         const appContainer = document.getElementById('app');
         // Variáveis para os elementos do DOM
-        let gameBoard, scoreDisplay, movesDisplay, levelDisplay, characterNameDisplay, targetScoreDisplay, menuLivesDisplay, gameLivesDisplay, menuTotalScoreDisplay, mapTotalScoreDisplay, gameTotalScoreDisplay;
+        let gameBoard;
         let musicPlayer;
         let isMuted = false;
         let levelStartTime = null;
@@ -950,20 +957,9 @@
                 await startGame(); 
             });
             document.getElementById('continue-to-score-btn').addEventListener('click', showLevelCompleteModal);
-            document.getElementById('next-level-btn').addEventListener('click', () => { 
-                document.getElementById('level-complete-modal').style.display = 'none';
-                const levelConfig = LEVELS[gameState.currentLevel];
-
-                if (levelConfig.level === 60) {
-                    gameState.currentLevel = 60; // Index of level 61
-                    renderGameScreen();
-                    prepareLevel();
-                } else if (levelConfig.isBoss) {
-                    const nextWorldIndex = Math.floor(gameState.currentLevel / 10) + 1;
-                    renderWorldMap(nextWorldIndex);
-                } else {
-                    renderWorldMap(Math.floor(gameState.currentLevel / 10));
-                }
+             document.getElementById('back-to-menu-from-complete-btn').addEventListener('click', () => {
+                document.getElementById('game-complete-modal').style.display = 'none';
+                renderMainMenu(auth.currentUser);
             });
             document.getElementById('continue-to-next-world-btn').addEventListener('click', () => {
                 document.getElementById('world-complete-modal').style.display = 'none';
@@ -1076,56 +1072,72 @@
                 sounds.tick.triggerAttackRelease("C5", "32n");
             }
             if (gameState.timer <= 0) {
+                clearInterval(gameState.timerInterval);
                 levelLose("Ficaste sem tempo!");
             }
         }
 
         function updateUI() {
+            // Menu Screen elements
+            const menuLivesDisplay = document.getElementById('menu-lives-display');
             if (menuLivesDisplay) menuLivesDisplay.textContent = gameState.lives;
-            if(menuTotalScoreDisplay) menuTotalScoreDisplay.textContent = gameState.totalScore;
-            if(mapTotalScoreDisplay) mapTotalScoreDisplay.textContent = gameState.totalScore;
-            if(gameTotalScoreDisplay) gameTotalScoreDisplay.textContent = gameState.totalScore;
-            
-            if (gameBoard) {
-                const levelConfig = LEVELS[gameState.currentLevel];
-                const character = levelConfig.character;
-                
-                scoreDisplay.textContent = gameState.score;
-                levelDisplay.textContent = levelConfig.level;
-                characterNameDisplay.textContent = character.name;
-                targetScoreDisplay.textContent = levelConfig.targetScore;
-                gameLivesDisplay.textContent = gameState.lives;
+            const menuTotalScoreDisplay = document.getElementById('menu-total-score-display');
+            if (menuTotalScoreDisplay) menuTotalScoreDisplay.textContent = gameState.totalScore.toLocaleString();
 
-                const movesOrTimeWrapper = document.getElementById('moves-or-time-display');
+            // World Map elements
+            const mapTotalScoreDisplay = document.getElementById('map-total-score-display');
+            if (mapTotalScoreDisplay) mapTotalScoreDisplay.textContent = gameState.totalScore.toLocaleString();
+            const mapEnergyCoinsDisplay = document.getElementById('map-energy-coins-display');
+            if (mapEnergyCoinsDisplay) mapEnergyCoinsDisplay.textContent = gameState.energyCoins;
+            
+            // Game Screen elements
+            const gameTotalScoreDisplay = document.getElementById('game-total-score-display');
+            if (gameTotalScoreDisplay) gameTotalScoreDisplay.textContent = gameState.totalScore.toLocaleString();
+            
+            const scoreDisplay = document.getElementById('game-score-display');
+            if (scoreDisplay) scoreDisplay.textContent = gameState.score;
+            
+            const levelDisplay = document.getElementById('game-level-display');
+            if (levelDisplay) levelDisplay.textContent = LEVELS[gameState.currentLevel].level;
+            
+            const characterNameDisplay = document.getElementById('game-character-display');
+            if (characterNameDisplay) characterNameDisplay.textContent = LEVELS[gameState.currentLevel].character.name;
+
+            const targetScoreDisplay = document.getElementById('game-target-display');
+            if (targetScoreDisplay) targetScoreDisplay.textContent = LEVELS[gameState.currentLevel].targetScore;
+            
+            const gameLivesDisplay = document.getElementById('game-lives-display');
+            if (gameLivesDisplay) gameLivesDisplay.textContent = gameState.lives;
+
+            const movesOrTimeWrapper = document.getElementById('moves-or-time-display');
+            if (movesOrTimeWrapper) {
+                const levelConfig = LEVELS[gameState.currentLevel];
                 if (levelConfig.time !== undefined) {
                     movesOrTimeWrapper.innerHTML = `
                         <div class="text-sm opacity-80">Tempo</div>
                         <div id="game-timer-display" class="text-2xl font-bold">${gameState.timer}</div>
                     `;
                     const timerDisplay = document.getElementById('game-timer-display');
-                    if (gameState.timer <= 10) {
-                        timerDisplay.classList.add('low-time');
-                    } else {
-                        timerDisplay.classList.remove('low-time');
+                    if (timerDisplay) {
+                        timerDisplay.classList.toggle('low-time', gameState.timer <= 10);
                     }
                 } else {
                     movesOrTimeWrapper.innerHTML = `
                         <div class="text-sm opacity-80">Jogadas</div>
                         <div id="game-moves-display" class="text-2xl font-bold">${gameState.moves}</div>
                     `;
-                    movesDisplay = document.getElementById('game-moves-display');
-                    if (gameState.moves <= 5) {
-                        movesDisplay.classList.add('low-moves');
-                    } else {
-                        movesDisplay.classList.remove('low-moves');
+                    const movesDisplay = document.getElementById('game-moves-display');
+                    if(movesDisplay) {
+                       movesDisplay.classList.toggle('low-moves', gameState.moves <= 5);
                     }
                 }
-                
-                const gameContainer = document.getElementById('game-container');
-                const colorMap = { yellow: '#f59e0b', blue: '#3b82f6', indigo: '#4f46e5', gray: '#4b5563', orange: '#f97316', lime: '#84cc16', purple: '#a855f7' };
-                if (gameContainer) {
-                    gameContainer.style.background = `radial-gradient(circle, ${colorMap[character.color]} 0%, #111827 100%)`;
-                }
+            }
+
+            const gameContainer = document.getElementById('game-container');
+            if (gameContainer) {
+                 const character = LEVELS[gameState.currentLevel].character;
+                 const colorMap = { yellow: '#f59e0b', blue: '#3b82f6', indigo: '#4f46e5', gray: '#4b5563', orange: '#f97316', lime: '#84cc16', purple: '#a855f7' };
+                 gameContainer.style.background = `radial-gradient(circle, ${colorMap[character.color]} 0%, #111827 100%)`;
             }
         }
 
@@ -1750,50 +1762,47 @@
             const character = levelConfig.character;
             const modal = document.getElementById('level-complete-modal');
             
-            // Sempre mostrar o modal de nível concluído primeiro
             modal.querySelector('#complete-char-img').src = character.img;
             document.getElementById('level-score-display').textContent = gameState.score;
             document.getElementById('final-score').textContent = gameState.score;
             let message = (character.message && levelConfig.isBoss) ? character.message : (character.messages ? character.messages[(levelConfig.level - 1) % 10] : `Mais um passo para derrotar ${character.name}!`);
             modal.querySelector('#complete-char-message').textContent = message;
+            
+            const nextLevelBtn = document.getElementById('next-level-btn');
+            nextLevelBtn.classList.add('hidden');
             modal.style.display = 'flex';
             
             await animateFinalScore();
 
-            // Guardar o progresso
             const oldTotalScore = gameState.totalScore;
             gameState.totalScore += gameState.score;
-            if (Math.floor(oldTotalScore / 10000) < Math.floor(gameState.totalScore / 10000)) {
-                gameState.lives++;
-                showBonusPopup("+1 Vida!");
+            
+            const oldMilestoneLives = Math.floor(oldTotalScore / 10000);
+            const newMilestoneLives = Math.floor(gameState.totalScore / 10000);
+            const livesEarned = newMilestoneLives - oldMilestoneLives;
+            if (livesEarned > 0) {
+                gameState.lives += livesEarned;
+                showBonusPopup(`+${livesEarned} Vida(s)!`);
             }
+            
             if (gameState.currentLevel === gameState.highestLevel) {
                 gameState.highestLevel++;
             }
-            if ((gameState.currentLevel + 1) % 10 === 0) {
+            if ((gameState.currentLevel + 1) % 10 === 0 && levelConfig.level < 61) {
                 gameState.lives++;
             }
             await saveGameData();
-
-            const nextLevelBtn = document.getElementById('next-level-btn');
             
-            // Decidir o que fazer a seguir
-            if (levelConfig.level === 61) {
-                nextLevelBtn.classList.add('hidden');
-                setTimeout(() => {
-                    modal.style.display = 'none';
+            setTimeout(() => {
+                modal.style.display = 'none';
+                if (levelConfig.level === 61) {
                     showGameCompleteModal();
-                }, 3000);
-            } else if (levelConfig.isBoss) {
-                nextLevelBtn.classList.add('hidden');
-                setTimeout(() => {
-                    modal.style.display = 'none';
+                } else if (levelConfig.isBoss) {
                     showWorldCompleteModal();
-                }, 3000);
-            } else {
-                nextLevelBtn.classList.remove('hidden');
-                nextLevelBtn.textContent = (levelConfig.level === 60) ? "Desafio Final!" : "Próximo Nível";
-            }
+                } else {
+                     renderWorldMap(Math.floor(gameState.currentLevel / 10));
+                }
+            }, 3000);
         }
 
         async function showWorldCompleteModal() {
@@ -1881,8 +1890,8 @@
                     bonusPoints += 10;
                     gameState.score += 10;
                     
-                    bonusScoreDisplay.textContent = bonusPoints;
-                    finalScoreDisplay.textContent = gameState.score;
+                    if(bonusScoreDisplay) bonusScoreDisplay.textContent = bonusPoints;
+                    if(finalScoreDisplay) finalScoreDisplay.textContent = gameState.score;
                     
                     const pitch = Tone.Frequency("C5").transpose(i % 12);
                     sounds.bonus.triggerAttackRelease(pitch, "32n");
@@ -2307,6 +2316,7 @@
                 if (!startTime) startTime = timestamp;
                 const progress = Math.min((timestamp - startTime) / duration, 1);
                 const currentDisplayScore = Math.floor(progress * (targetScore - startScore) + startScore);
+                const scoreDisplay = document.getElementById('game-score-display');
                 if (scoreDisplay) scoreDisplay.textContent = currentDisplayScore;
                 if (progress < 1) {
                     requestAnimationFrame(animationStep);
@@ -2337,8 +2347,6 @@
         function renderMainMenu(user) {
             stopMusic();
             gameBoard = null;
-            mapTotalScoreDisplay = null;
-            gameTotalScoreDisplay = null;
             const template = document.getElementById('main-menu-template');
             appContainer.innerHTML = '';
             appContainer.appendChild(template.content.cloneNode(true));
@@ -2351,8 +2359,6 @@
                 userInfo.classList.remove('hidden');
                 document.getElementById('username-display').textContent = user.displayName || user.email;
                 document.getElementById('play-map-btn').addEventListener('click', () => renderWorldMap(Math.floor(gameState.highestLevel / 10)));
-                menuLivesDisplay = document.getElementById('menu-lives-display');
-                menuTotalScoreDisplay = document.getElementById('menu-total-score-display');
             } else {
                 authButtons.classList.remove('hidden');
                 userInfo.classList.add('hidden');
@@ -2379,12 +2385,9 @@
             playMusic(worldMusic, 0.3);
 
             gameBoard = null;
-            menuTotalScoreDisplay = null;
-            gameTotalScoreDisplay = null;
             const template = document.getElementById('world-map-template');
             appContainer.innerHTML = '';
             appContainer.appendChild(template.content.cloneNode(true));
-            mapTotalScoreDisplay = document.getElementById('map-total-score-display');
             const worldTabsContainer = document.getElementById('world-tabs');
             const levelGrid = document.getElementById('level-grid');
             const backBtn = document.getElementById('back-to-main-menu-btn');
@@ -2509,15 +2512,7 @@
             appContainer.innerHTML = '';
             appContainer.appendChild(template.content.cloneNode(true));
 
-            // Atribuir os elementos do DOM agora que existem
             gameBoard = document.getElementById('game-board');
-            scoreDisplay = document.getElementById('game-score-display');
-            movesDisplay = document.getElementById('game-moves-display');
-            levelDisplay = document.getElementById('game-level-display');
-            characterNameDisplay = document.getElementById('game-character-display');
-            targetScoreDisplay = document.getElementById('game-target-display');
-            gameLivesDisplay = document.getElementById('game-lives-display');
-            gameTotalScoreDisplay = document.getElementById('game-total-score-display');
             
             document.getElementById('quit-level-btn').addEventListener('click', () => {
                 clearTimeout(gameState.hintTimer);
@@ -2628,6 +2623,7 @@
             sidebar.innerHTML = ''; // Limpar separadores anteriores
 
             const categories = [
+                { name: 'Vencedores', field: 'gameCompleted', icon: `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M15.5,2.8H14.6V2a1,1,0,0,0-1-1H6.4a1,1,0,0,0-1,1V2.8H4.5A1.5,1.5,0,0,0,3,4.3V6.8A1.5,1.5,0,0,0,4.5,8.3H5V15a3,3,0,0,0,3,3h4a3,3,0,0,0,3-3V8.3h.5A1.5,1.5,0,0,0,17,6.8V4.3A1.5,1.5,0,0,0,15.5,2.8ZM6.4,3h7.2V4.8H6.4ZM14,15a1,1,0,0,1-1,1H7a1,1,0,0,1-1-1V8.3h8Z"/></svg>` },
                 { name: 'Pontos', field: 'totalScore', icon: `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>` },
                 { name: 'Níveis', field: 'highestLevel', icon: `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>` },
                 { name: 'Horas de Jogo', field: 'totalPlayTimeMinutes', icon: `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>` },
@@ -2675,15 +2671,30 @@
 
         async function fetchAndDisplayRanking(fieldPath) {
             const content = document.getElementById('hall-of-fame-content');
-            document.getElementById('hof-title').textContent = document.querySelector(`.hof-tab[data-field="${fieldPath}"] span`).textContent;
+            const titleEl = document.getElementById('hof-title');
+            const tabEl = document.querySelector(`.hof-tab[data-field="${fieldPath}"] span`);
+            if (titleEl && tabEl) {
+                titleEl.textContent = tabEl.textContent;
+            }
             content.innerHTML = '<p class="text-center">A carregar o ranking...</p>';
 
             try {
                 const leaderboardRef = collection(db, "leaderboard");
-                const q = query(leaderboardRef, orderBy(fieldPath, "desc"), limit(10));
-                const querySnapshot = await getDocs(q);
+                 let players = [];
 
-                if (querySnapshot.empty) {
+                if (fieldPath === 'gameCompleted') {
+                    const q = query(leaderboardRef, where("highestLevel", ">=", 61));
+                    const querySnapshot = await getDocs(q);
+                    querySnapshot.forEach(doc => players.push(doc.data()));
+                    players.sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+                    players = players.slice(0, 10);
+                } else {
+                    const q = query(leaderboardRef, orderBy(fieldPath, "desc"), limit(10));
+                    const querySnapshot = await getDocs(q);
+                    querySnapshot.forEach(doc => players.push(doc.data()));
+                }
+
+                if (players.length === 0) {
                     content.innerHTML = '<p class="text-center">Ainda ninguém se classificou nesta categoria.</p>';
                     return;
                 }
@@ -2693,15 +2704,22 @@
 
                 const getNestedValue = (obj, path) => path.split('.').reduce((acc, part) => acc && acc[part], obj);
 
-                querySnapshot.forEach((doc) => {
-                    const player = doc.data();
+                players.forEach((player) => {
                     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-                    let score = getNestedValue(player, fieldPath) || 0;
-                    let displayScore = score.toLocaleString();
-
-                    if (fieldPath === 'totalPlayTimeMinutes') {
-                        const hours = (score / 60).toFixed(1);
-                        displayScore = `${hours}h`;
+                    
+                    let displayValue;
+                    if (fieldPath === 'gameCompleted') {
+                         const score = player.totalScore || 0;
+                         const time = (player.totalPlayTimeMinutes || 0) / 60;
+                         displayValue = `<div class="text-right"><span class="font-bold text-yellow-400">${score.toLocaleString()} pts</span><br><span class="text-xs text-gray-300">${time.toFixed(1)}h</span></div>`;
+                    } else {
+                        let score = getNestedValue(player, fieldPath) || 0;
+                        if (fieldPath === 'totalPlayTimeMinutes') {
+                            const hours = (score / 60).toFixed(1);
+                            displayValue = `<span class="font-bold text-yellow-400">${hours}h</span>`;
+                        } else {
+                             displayValue = `<span class="font-bold text-yellow-400">${score.toLocaleString()}</span>`;
+                        }
                     }
                     
                     rankHTML += `
@@ -2710,7 +2728,7 @@
                             <div class="flex-grow">
                                 <span class="text-white text-xl">${player.name || 'Anónimo'}</span>
                             </div>
-                            <span class="font-bold text-yellow-400">${displayScore}</span>
+                            ${displayValue}
                         </li>
                     `;
                     rank++;
