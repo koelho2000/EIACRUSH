@@ -34,7 +34,7 @@
             position: relative;
             background: radial-gradient(circle, #6b7280, #374151);
             border-radius: 20%;
-            box-shadow: 
+            box-shadow:
                 inset 0 4px 6px rgba(255, 255, 255, 0.2), /* Brilho superior interno */
                 inset 0 -4px 6px rgba(0, 0, 0, 0.3),   /* Sombra inferior interna */
                 0 5px 10px rgba(0, 0, 0, 0.5);       /* Sombra projetada no tabuleiro */
@@ -47,7 +47,7 @@
         }
         .gem.is-selected {
             transform: scale(1.1);
-            box-shadow: 
+            box-shadow:
                 inset 0 4px 6px rgba(255, 255, 255, 0.2),
                 inset 0 -4px 6px rgba(0, 0, 0, 0.3),
                 0 5px 10px rgba(0, 0, 0, 0.5),
@@ -192,6 +192,25 @@
             0% { transform: translateY(0); opacity: 1; }
             100% { transform: translateY(-60px); opacity: 0; }
         }
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 20;
+            animation: particle-anim 0.7s forwards;
+        }
+        @keyframes particle-anim {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
         /* Mapa de Níveis */
         .level-node {
             width: 50px; height: 50px;
@@ -227,6 +246,24 @@
             border-radius: 50%;
             background-color: rgba(255, 255, 255, 0.5);
             animation: ripple-out 0.7s forwards;
+        }
+        .shockwave {
+            position: absolute;
+            border-radius: 50%;
+            border: 5px solid white;
+            pointer-events: none;
+            z-index: 15;
+            animation: shockwave-anim 0.4s forwards;
+        }
+        @keyframes shockwave-anim {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
         }
         @keyframes ripple-out {
             from {
@@ -397,7 +434,7 @@
         <div class="modal-content bg-green-600 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4">
             <h2 class="text-4xl font-bold mb-2">Nível Concluído!</h2>
             <img id="complete-char-img" src="https://placehold.co/150x150/10b981/ffffff?text=EIA" class="mx-auto mb-4 rounded-full border-4 border-green-300">
-            
+
             <div id="bonus-points-container" class="text-lg mb-4">
                 <p>Pontos do Nível: <span id="level-score-display">0</span></p>
                 <p>Bónus: <span id="bonus-score-display">0</span></p>
@@ -410,13 +447,13 @@
             <a href="https://www.eia.pt" target="_blank" class="block text-center text-green-100 mt-4 text-sm hover:text-white">www.eia.pt</a>
         </div>
     </div>
-    
+
     <!-- Modal de Fim de Mundo -->
     <div id="world-complete-modal" class="modal">
         <div class="modal-content bg-gradient-to-br from-blue-600 to-green-500 p-8 rounded-2xl shadow-2xl text-center max-w-lg mx-4">
             <h2 id="world-complete-title" class="text-5xl font-bold mb-4 text-white" style="text-shadow: 2px 2px 4px #000;">Mundo 1 - Sunny Concluído!</h2>
             <p class="text-xl text-white mb-6">Excelente trabalho! Derrotaste <span id="world-complete-character-name"></span> e trouxeste mais energia limpa ao mundo!</p>
-            
+
             <div class="bg-black bg-opacity-30 p-4 rounded-lg text-left space-y-2 mb-4">
                 <h3 class="text-2xl font-bold text-yellow-300 text-center mb-4">O Teu Resumo</h3>
                 <p class="text-lg"><strong>Pontuação Total:</strong> <span id="summary-world-total-score" class="font-bold text-white float-right">0</span></p>
@@ -440,7 +477,7 @@
         <div class="modal-content bg-gradient-to-br from-purple-600 to-yellow-500 p-8 rounded-2xl shadow-2xl text-center max-w-lg mx-4">
             <h2 class="text-5xl font-bold mb-4 text-white" style="text-shadow: 2px 2px 4px #000;">Parabéns!</h2>
             <p class="text-xl text-white mb-6">Concluíste a tua jornada EIA Crush e ajudaste a construir um futuro com mais energia!</p>
-            
+
             <div class="bg-black bg-opacity-30 p-4 rounded-lg text-left space-y-2 mb-6">
                 <h3 class="text-2xl font-bold text-yellow-300 text-center mb-4">Resumo Final</h3>
                 <p class="text-lg"><strong>Pontuação Total:</strong> <span id="summary-total-score" class="font-bold text-white float-right">0</span></p>
@@ -477,13 +514,13 @@
              <a href="https://www.eia.pt" target="_blank" class="block text-center text-red-100 mt-4 text-sm hover:text-white">www.eia.pt</a>
         </div>
     </div>
-    
+
     <!-- Modal de Ajuda do Jogo -->
     <div id="help-modal" class="modal">
         <div class="modal-content bg-gray-800 p-6 rounded-2xl shadow-2xl text-left max-w-lg w-11/12 mx-4 relative">
             <h2 class="text-3xl font-bold mb-4 text-center text-yellow-400">Guia do Jogo</h2>
             <button id="close-help-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">X</button>
-            
+
             <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div>
                     <h3 class="text-xl font-bold text-purple-400">Mecânica Básica</h3>
@@ -539,13 +576,13 @@
             <button id="close-history-btn" class="absolute top-4 right-4 text-white bg-red-500 hover:bg-red-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">X</button>
             <div id="history-content" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                 <p class="text-gray-300">Num mundo a lutar por um futuro mais limpo, as forças da Natureza ganham vida! Os Heróis da Energia Renovável - Sunny, Breezy e Splashy - unem-se para energizar o planeta de forma sustentável. Mas os Vilões dos Combustíveis Fósseis - Oily, Smokey e Gassy - farão de tudo para manter o mundo dependente das suas fontes de energia poluentes. Ajuda os heróis nesta batalha épica, combinando as energias certas para salvar o dia!</p>
-                
+
                 <div id="heroes-section"></div>
                 <div id="villains-section"></div>
             </div>
         </div>
     </div>
-    
+
     <!-- Modal de Ajuda do Mapa -->
     <div id="world-help-modal" class="modal">
         <div class="modal-content bg-gray-800 p-6 rounded-2xl shadow-2xl text-left max-w-lg w-11/12 mx-4 relative">
@@ -614,7 +651,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Modal Hall of Fame -->
     <div id="hall-of-fame-modal" class="modal">
         <div class="modal-content bg-gray-900 p-4 rounded-2xl shadow-2xl text-left max-w-3xl w-11/12 mx-4 relative flex gap-4">
@@ -640,19 +677,19 @@
     <script type="module">
         // --- IMPORTS E CONFIGURAÇÃO DO FIREBASE ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            onAuthStateChanged, 
-            createUserWithEmailAndPassword, 
+        import {
+            getAuth,
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
             signOut,
             updateProfile,
             sendPasswordResetEmail
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            getDoc, 
+        import {
+            getFirestore,
+            doc,
+            getDoc,
             setDoc,
             collection,
             query,
@@ -679,7 +716,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
+
         const appContainer = document.getElementById('app');
         // Variáveis para os elementos do DOM
         let gameBoard;
@@ -689,8 +726,8 @@
         let patchClickCounter = 0;
 
         const HEROES = [
-            { 
-                name: 'Sunny', color: 'yellow', img: 'https://placehold.co/150x150/f59e0b/ffffff?text=S', 
+            {
+                name: 'Sunny', color: 'yellow', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmNTllMGIiLz48L3N2Zz4=',
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Sunny%5BRise&Shine%5D%23EIA.mp3",
                 description: 'Sunny é a personificação da energia solar. Sempre otimista, irradia calor e positividade, iluminando o caminho para um futuro mais limpo.',
                 messages: [
@@ -699,8 +736,8 @@
                     "Poder solar em ação!", "Excelente combinação!", "Mantém o ritmo!"
                 ]
             },
-            { 
-                name: 'Breezy', color: 'blue', img: 'https://placehold.co/150x150/60a5fa/ffffff?text=B', 
+            {
+                name: 'Breezy', color: 'blue', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM2MGE1ZmEiLz48L3N2Zz4=',
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Ride%20the%20Wind%20-%20Breezy's%20Song.mp3",
                 description: 'Breezy comanda a força dos ventos. É ágil, rápido e livre, representando o poder imparável da energia eólica para mover o mundo.',
                 messages: [
@@ -709,8 +746,8 @@
                     "Rajada de pontos!", "Que ventania de combinações!", "Não há quem te pare!"
                 ]
             },
-            { 
-                name: 'Splashy', color: 'indigo', img: 'https://placehold.co/150x150/4f46e5/ffffff?text=S', 
+            {
+                name: 'Splashy', color: 'indigo', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ZjQ2ZTUiLz48L3N2Zz4=',
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Make%20a%20Splash!%20-%20Splashy%E2%80%99s%20Song.mp3",
                 description: 'Splashy representa a energia hídrica. Calmo mas poderoso, a sua força reside na constância e na capacidade de se adaptar e fluir.',
                 messages: [
@@ -720,21 +757,21 @@
                 ]
             },
         ];
-        
+
         const VILLAINS = [
-            { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O', 
-            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Fuel%20the%20Fire%20-%20Oily's%20Song.mp3", 
+            { name: 'Oily', color: 'gray', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0YjU1NjMiLz48L3N2Zz4=',
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Fuel%20the%20Fire%20-%20Oily's%20Song.mp3",
             description: 'Oily é o barão do petróleo. Astuto e escorregadio, ele tenta manter o mundo preso ao passado, sujando tudo à sua volta.', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
-            { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S', 
-            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%5BBurning-Strong%5D%23EIA.mp3", 
+            { name: 'Smokey', color: 'orange', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmOTczMTYiLz48L3N2Zz4=',
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%5BBurning-Strong%5D%23EIA.mp3",
             description: 'Smokey é a personificação da poluição do carvão. Deixa um rasto de fumo e cinza por onde passa, obscurecendo o futuro.', message: "O meu fumo vai-te deixar a tossir!" },
-            { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G', 
-            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Zoom,%20Boom,%20Whoosh!%20-%20Gassy%E2%80%99s%20Song.mp3", 
+            { name: 'Gassy', color: 'lime', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM4NGNjMTYiLz48L3N2Zz4=',
+            music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Zoom,%20Boom,%20Whoosh!%20-%20Gassy%E2%80%99s%20Song.mp3",
             description: 'Gassy representa os gases de efeito estufa. É volátil e traiçoeiro, sempre a tentar aquecer o planeta com as suas emissões.', message: "Não vais conseguir aguentar este cheiro a derrota!" },
         ];
-        
+
         const FINAL_BOSS = {
-            name: 'EIA Master', color: 'purple', img: 'https://placehold.co/150x150/a855f7/ffffff?text=EIA',
+            name: 'EIA Master', color: 'purple', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNhODU1ZjciLz48L3N2Zz4=',
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Energy%20in%20Action%20-%20song%20theme.mp3"
         };
 
@@ -760,15 +797,15 @@
 
         const ICONS = [
             // Heróis
-            `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="#fde047"/><path d="M50 10 V 0 M50 90 V 100 M10 50 H 0 M90 50 H 100 M25 25 L 18 18 M75 75 L 82 82 M25 75 L 18 82 M75 25 L 82 18" stroke="#facc15" stroke-width="8" stroke-linecap="round"/></svg>`, // 0: Sol (Sunny)
-            `<svg viewBox="0 0 100 100"><path d="M50,95 L 50,55" stroke="#a0aec0" stroke-width="6" stroke-linecap="round"/><g transform="translate(50,50) rotate(0)"><path d="M0,0 C 20,-5 35,-20 40,-40 L 0,0 Z" fill="#e2e8f0"/></g><g transform="translate(50,50) rotate(120)"><path d="M0,0 C 20,-5 35,-20 40,-40 L 0,0 Z" fill="#e2e8f0"/></g><g transform="translate(50,50) rotate(240)"><path d="M0,0 C 20,-5 35,-20 40,-40 L 0,0 Z" fill="#e2e8f0"/></g><circle cx="50" cy="50" r="8" fill="#60a5fa"/></svg>`, // 1: Vento (Breezy)
-            `<svg viewBox="0 0 100 100"><path d="M50 10 C 20 40, 20 70, 50 90 C 80 70, 80 40, 50 10 Z" fill="#67e8f9"/></svg>`, // 2: Gota (Splashy)
+            `<svg viewBox="0 0 100 100"><defs><radialGradient id="gradSun" cx="50%" cy="50%" r="50%" fx="50%" fy="50%"><stop offset="0%" style="stop-color:rgb(255,255,204);stop-opacity:1" /><stop offset="100%" style="stop-color:rgb(253,224,71);stop-opacity:1" /></radialGradient></defs><circle cx="50" cy="50" r="35" fill="url(#gradSun)"/><path d="M50,5 L50,15 M50,85 L50,95 M5,50 L15,50 M85,50 L95,50 M21,21 L28,28 M72,72 L79,79 M21,79 L28,72 M72,28 L79,21" stroke="#FFD700" stroke-width="6" stroke-linecap="round"/></svg>`, // 0: Sol (Sunny)
+            `<svg viewBox="0 0 100 100"><defs><linearGradient id="gradWind" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:rgb(224,242,254);stop-opacity:1" /><stop offset="100%" style="stop-color:rgb(147,197,253);stop-opacity:1" /></linearGradient></defs><path d="M20 50 C 40 20, 60 20, 80 50 S 60 80, 40 80" fill="none" stroke="url(#gradWind)" stroke-width="10" stroke-linecap="round"/><path d="M25 65 C 40 45, 60 45, 75 65" fill="none" stroke="#93C5FD" stroke-width="8" stroke-linecap="round"/></svg>`, // 1: Vento (Breezy)
+            `<svg viewBox="0 0 100 100"><defs><radialGradient id="gradWater" cx="50%" cy="50%" r="50%" fx="30%" fy="30%"><stop offset="0%" style="stop-color:rgb(224,242,254);stop-opacity:1" /><stop offset="100%" style="stop-color:rgb(59,130,246);stop-opacity:1" /></radialGradient></defs><path d="M50 10 C 20 40, 20 70, 50 90 C 80 70, 80 40, 50 10 Z" fill="url(#gradWater)"/><circle cx="40" cy="40" r="8" fill="rgba(255,255,255,0.7)"/></svg>`, // 2: Gota (Splashy)
             // Vilões
-            `<svg viewBox="0 0 100 100"><path d="M50 10 C 20 40, 20 70, 50 90 C 80 70, 80 40, 50 10 Z" fill="#a3e635"/></svg>`, // 3: Gota de Petróleo (Oily)
-            `<svg viewBox="0 0 100 100"><polygon points="20,40 30,20 60,20 80,45 75,70 50,85 25,75" fill="#262626"/><polygon points="30,20 50,35 60,20" fill="#404040"/><polygon points="20,40 40,50 25,75" fill="#404040"/><polygon points="80,45 65,55 75,70" fill="#404040"/></svg>`, // 4: Carvão (Smokey)
-            `<svg viewBox="0 0 100 100"><path d="M50 90 C 70 90, 80 70, 80 50 C 80 30, 60 10, 50 10 C 40 10, 20 30, 20 50 C 20 70, 30 90, 50 90 Z" fill="#ef4444"/><path d="M50 80 C 60 80, 70 65, 70 50 C 70 35, 60 20, 50 20 C 40 20, 30 35, 30 50 C 30 65, 40 80, 50 80 Z" fill="#f87171"/></svg>`, // 5: Chama de Gás (Gassy)
+            `<svg viewBox="0 0 100 100"><defs><radialGradient id="gradOil" cx="50%" cy="50%" r="50%" fx="30%" fy="30%"><stop offset="0%" style="stop-color:rgb(107,114,128);stop-opacity:1" /><stop offset="100%" style="stop-color:rgb(17,24,39);stop-opacity:1" /></radialGradient></defs><path d="M50 10 C 20 40, 20 70, 50 90 C 80 70, 80 40, 50 10 Z" fill="url(#gradOil)"/><path d="M50 20 C 40 40, 40 60, 50 75 C 60 60, 60 40, 50 20" fill="rgba(255,255,255,0.1)"/></svg>`, // 3: Gota de Petróleo (Oily)
+            `<svg viewBox="0 0 100 100"><defs><linearGradient id="gradCoal" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:rgb(75,85,99);stop-opacity:1" /><stop offset="100%" style="stop-color:rgb(31,41,55);stop-opacity:1" /></linearGradient></defs><polygon points="20,45 35,20 65,20 80,45 70,75 50,85 30,75" fill="url(#gradCoal)" stroke="#111827" stroke-width="3"/><polygon points="35,20 50,40 65,20" fill="rgba(255,255,255,0.1)"/><polygon points="20,45 40,55 30,75" fill="rgba(255,255,255,0.05)"/><polygon points="80,45 60,55 70,75" fill="rgba(0,0,0,0.1)"/></svg>`, // 4: Carvão (Smokey)
+            `<svg viewBox="0 0 100 100"><defs><radialGradient id="gradGas" cx="50%" cy="50%" r="50%" fx="50%" fy="80%"><stop offset="0%" style="stop-color:rgb(251,191,36);stop-opacity:1" /><stop offset="100%" style="stop-color:rgb(239,68,68);stop-opacity:1" /></radialGradient></defs><path d="M50,90 C 20,70 30,30 50,10 C 70,30 80,70 50,90 Z" fill="url(#gradGas)"/><path d="M50,90 C 40,75 45,50 50,30 C 55,50 60,75 50,90 Z" fill="rgba(255,255,255,0.3)"/></svg>`, // 5: Chama de Gás (Gassy)
             // Ícone da Bomba de Cor
-            `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#1f2937"/><circle cx="50" cy="50" r="30" fill="url(#grad)"/><defs><radialGradient id="grad"><stop offset="0%" stop-color="#f472b6"/><stop offset="25%" stop-color="#60a5fa"/><stop offset="50%" stop-color="#facc15"/><stop offset="75%" stop-color="#4ade80"/><stop offset="100%" stop-color="#f472b6"/></radialGradient></defs></svg>`
+            `<svg viewBox="0 0 100 100"><defs><radialGradient id="gradColorBomb" cx="50%" cy="50%" r="50%" fx="50%" fy="50%"><stop offset="0%" stop-color="#fff" /><stop offset="50%" stop-color="#f9a8d4" /><stop offset="100%" stop-color="#a855f7" /></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="3.5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="50" cy="50" r="30" fill="url(#gradColorBomb)" filter="url(#glow)"/><path d="M50,15 A35,35 0 1,1 15,50" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="5" stroke-linecap="round" stroke-dasharray="10, 15"/></svg>`
         ];
         const ICON_NAMES = ["Energia Solar", "Energia Eólica", "Energia Hídrica", "Petróleo", "Carvão", "Gás Natural"];
 
@@ -782,19 +819,19 @@
             const isTimedLevel = (level % 10 === 5);
             let rows, cols;
             if (level < 10) { rows = 7; cols = 7; } else if (level < 20) { rows = 8; cols = 7; } else if (level < 30) { rows = 8; cols = 8; } else if (level < 40) { rows = 9; cols = 8; } else if (level < 50) { rows = 9; cols = 9; } else { rows = 10; cols = 9; }
-            
+
             const rawScore = 1500 + Math.floor(Math.pow(i, 1.3) * 100);
             const targetScore = Math.round(rawScore / 250) * 250;
             const moves = Math.max(15, 35 - Math.floor(i / 2.5));
 
-            const config = { 
-                level, 
-                rows, 
-                cols, 
-                targetScore: targetScore, 
-                moves: moves, 
-                character: character, 
-                isBoss: isBossLevel, 
+            const config = {
+                level,
+                rows,
+                cols,
+                targetScore: targetScore,
+                moves: moves,
+                character: character,
+                isBoss: isBossLevel,
             };
 
             if (isTimedLevel) {
@@ -858,7 +895,7 @@
             stats: {},
             totalPlayTimeMinutes: 0
         };
-        
+
         // --- SONS DO JOGO ---
         const sounds = {
             swap: new Tone.FMSynth({ harmonicity: 8, modulationIndex: 2, envelope: { attack: 0.01, decay: 0.2, release: 0.2 }, modulationEnvelope: { attack: 0.01, decay: 0.1, release: 0.1 } }).toDestination(),
@@ -867,10 +904,13 @@
             win: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth" }, envelope: { attack: 0.05, decay: 0.2, sustain: 0.3, release: 0.5 } }).toDestination(),
             lose: new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'fmsquare', modulationType: 'sawtooth', modulationIndex: 3, harmonicity: 3.4 }, envelope: { attack: 0.05, decay: 0.4, sustain: 0.1, release: 1 } }).toDestination(),
             bonus: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
-            tick: new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 6, envelope: { attack: 0.001, decay: 0.2, sustain: 0 } }).toDestination()
+            tick: new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 6, envelope: { attack: 0.001, decay: 0.2, sustain: 0 } }).toDestination(),
+            createSuper: new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 } }).toDestination(),
+            combo: new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.01, decay: 0.4, release: 0.2 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).toDestination(),
+            uiClick: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination()
         };
         sounds.tick.volume.value = -12;
-        
+
         // --- CONTEÚDO EDUCATIVO ---
         const ENERGY_FACTS = [
             "A energia solar captada pela Terra numa hora é suficiente para abastecer o planeta inteiro por um ano.",
@@ -929,7 +969,7 @@
             isMuted = !isMuted;
             Tone.Master.mute = isMuted;
             musicPlayer.muted = isMuted;
-            
+
             document.getElementById('speaker-icon').classList.toggle('hidden', isMuted);
             document.getElementById('muted-speaker-icon').classList.toggle('hidden', !isMuted);
         }
@@ -940,6 +980,12 @@
             musicPlayer = document.getElementById('music-player');
             document.getElementById('mute-btn').addEventListener('click', toggleMute);
 
+            document.body.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    sounds.uiClick.triggerAttackRelease('C6', '32n');
+                }
+            });
+
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     await loadGameData(user.uid);
@@ -949,12 +995,12 @@
                     renderMainMenu(null);
                 }
             });
-            
+
             // Listeners dos modais do jogo
-            document.getElementById('start-game-btn').addEventListener('click', async () => { 
-                document.getElementById('level-start-modal').style.display = 'none'; 
+            document.getElementById('start-game-btn').addEventListener('click', async () => {
+                document.getElementById('level-start-modal').style.display = 'none';
                 setMusicVolume(0.1); // Baixa o volume para o nível
-                await startGame(); 
+                await startGame();
             });
             document.getElementById('continue-to-score-btn').addEventListener('click', showLevelCompleteModal);
              document.getElementById('back-to-menu-from-complete-btn').addEventListener('click', () => {
@@ -966,10 +1012,10 @@
                 const nextWorldIndex = Math.floor(gameState.currentLevel / 10) + 1;
                 renderWorldMap(nextWorldIndex);
             });
-            document.getElementById('start-bonus-btn').addEventListener('click', async () => { 
-                document.getElementById('bonus-level-modal').style.display = 'none'; 
+            document.getElementById('start-bonus-btn').addEventListener('click', async () => {
+                document.getElementById('bonus-level-modal').style.display = 'none';
                 setMusicVolume(0.1);
-                await startGame(); 
+                await startGame();
             });
             document.getElementById('close-help-btn').addEventListener('click', () => { document.getElementById('help-modal').style.display = 'none'; });
             document.getElementById('close-world-help-btn').addEventListener('click', () => { document.getElementById('world-help-modal').style.display = 'none'; });
@@ -1008,7 +1054,7 @@
             modal.querySelector('#start-char-img').src = character.img;
             modal.querySelector('#start-level').textContent = levelConfig.level;
             modal.querySelector('#start-target').textContent = levelConfig.targetScore;
-            
+
             let extraText = '';
             if (levelConfig.time) {
                 extraText += `<span class="font-bold text-red-400">Tempo: ${levelConfig.time}s</span>`;
@@ -1019,7 +1065,7 @@
                 extraText += `<br><span class="font-bold text-yellow-400">Baralha a cada ${levelConfig.autoReshuffle / 1000}s!</span>`;
             }
             extraInfoEl.innerHTML = extraText;
-            
+
             modal.style.display = 'flex';
         }
 
@@ -1055,7 +1101,7 @@
                 levelStartTime = null; // Reset timer
             }
         }
-        
+
         function autoReshuffleLoop() {
             gameState.autoReshuffleInterval = setTimeout(async () => {
                 if (!gameState.isLocked) {
@@ -1089,23 +1135,23 @@
             if (mapTotalScoreDisplay) mapTotalScoreDisplay.textContent = gameState.totalScore.toLocaleString();
             const mapEnergyCoinsDisplay = document.getElementById('map-energy-coins-display');
             if (mapEnergyCoinsDisplay) mapEnergyCoinsDisplay.textContent = gameState.energyCoins;
-            
+
             // Game Screen elements
             const gameTotalScoreDisplay = document.getElementById('game-total-score-display');
             if (gameTotalScoreDisplay) gameTotalScoreDisplay.textContent = gameState.totalScore.toLocaleString();
-            
+
             const scoreDisplay = document.getElementById('game-score-display');
             if (scoreDisplay) scoreDisplay.textContent = gameState.score;
-            
+
             const levelDisplay = document.getElementById('game-level-display');
             if (levelDisplay) levelDisplay.textContent = LEVELS[gameState.currentLevel].level;
-            
+
             const characterNameDisplay = document.getElementById('game-character-display');
             if (characterNameDisplay) characterNameDisplay.textContent = LEVELS[gameState.currentLevel].character.name;
 
             const targetScoreDisplay = document.getElementById('game-target-display');
             if (targetScoreDisplay) targetScoreDisplay.textContent = LEVELS[gameState.currentLevel].targetScore;
-            
+
             const gameLivesDisplay = document.getElementById('game-lives-display');
             if (gameLivesDisplay) gameLivesDisplay.textContent = gameState.lives;
 
@@ -1148,7 +1194,7 @@
             gameBoard.innerHTML = '';
             gameBoard.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
             gameBoard.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-            
+
             let attempts = 0;
             do {
                 gameState.board = []; // Reset board on each attempt
@@ -1174,7 +1220,7 @@
                     }
                 } else {
                     for (let r = 0; r < rows; r++) {
-                        const row = []; 
+                        const row = [];
                         for (let c = 0; c < cols; c++) {
                             let type;
                             do {
@@ -1190,7 +1236,7 @@
                 }
                 attempts++;
             } while ((findMatches().size > 0 || !checkForPossibleMoves()) && attempts < 20);
-            
+
             renderBoard();
             gameState.isLocked = false;
         }
@@ -1222,16 +1268,16 @@
         }
 
         // --- LÓGICA DE MOVIMENTO (CLIQUE) ---
-        
+
         async function gemClick(e) {
             if (gameState.isLocked) return;
             resetHintTimer();
             const clickedGem = e.target.closest('.gem');
             if (!clickedGem) return;
-            
+
             const r = parseInt(clickedGem.dataset.r);
             const c = parseInt(clickedGem.dataset.c);
-             
+
             // --- Patch Logic Start ---
             const levelConfig = LEVELS[gameState.currentLevel];
             const targetR = levelConfig.rows - 1;
@@ -1280,13 +1326,13 @@
                 sounds.swap.triggerAttackRelease('C5', '16n');
             }
         }
-        
+
         async function swap(r1, c1, r2, c2, isUndo = false) {
             if (gameState.isLocked && !isUndo) return;
             if (gameState.board[r1][c1]?.isLocked || gameState.board[r2][c2]?.isLocked) return;
 
             gameState.isLocked = true;
-            
+
             try {
                 const gem1 = gameState.board[r1][c1];
                 const gem2 = gameState.board[r2][c2];
@@ -1312,10 +1358,10 @@
                     gameState.moves--;
                     updateUI();
                 }
-                
+
                 gameState.board[r1][c1] = gem2;
                 gameState.board[r2][c2] = gem1;
-                
+
                 if (!isUndo) sounds.swap.triggerAttackRelease('G5', '8n');
                 renderBoard();
                 await delay(300);
@@ -1324,7 +1370,7 @@
                 if (matches.size > 0) {
                     await handleMatches(matches, {r: r2, c: c2});
                 } else if (!isUndo) {
-                     if (LEVELS[gameState.currentLevel].moves !== undefined) gameState.moves++; 
+                     if (LEVELS[gameState.currentLevel].moves !== undefined) gameState.moves++;
                     updateUI();
                     await swap(r1, c1, r2, c2, true);
                 }
@@ -1377,7 +1423,7 @@
             }
             return matches;
         }
-        
+
         async function handleMatches(initialMatches, swapPosition, bonusPoints = 0) {
             gameState.isLocked = true;
             let chain = 1;
@@ -1397,18 +1443,18 @@
                 const pointsFromExplosion = await explodeGems(currentExplosions, chain, totalBonus);
                 pointsThisTurn += pointsFromExplosion;
                 totalBonus = 0;
-                
+
                 newSuperIcons.forEach(superIcon => {
                     gameState.board[superIcon.r][superIcon.c] = { type: superIcon.type, superType: superIcon.superType };
                 });
 
                 await processBoardAfterExplosion();
-                
+
                 const newMatches = findMatches();
                 newMatches.forEach(match => explosionQueue.add(match));
                 if (newMatches.size > 0) chain++;
             }
-            
+
             if (pointsThisTurn > 200) {
                 const levelConfig = LEVELS[gameState.currentLevel];
                 if (levelConfig.time !== undefined) {
@@ -1456,7 +1502,7 @@
             }
             return { shape: 'line-3' };
         }
-        
+
         function createSuperIcons(allMatches, swapPosition) {
             const newSuperIcons = [];
             const allMatchedGems = new Set();
@@ -1468,8 +1514,9 @@
                 if (shape === 'line-5') superType = 'color-bomb';
                 else if (shape === 'L/T') superType = 'wrapped';
                 else if (shape === 'line-4') superType = orientation === 'horizontal' ? 'striped-v' : 'striped-h';
-                
+
                 if (superType) {
+                    sounds.createSuper.triggerAttackRelease('C5', '8n');
                     let [r, c] = matchGroup.values().next().value.split('-').map(Number);
                     if (swapPosition && matchGroup.has(`${swapPosition.r}-${swapPosition.c}`)) {
                         r = swapPosition.r; c = swapPosition.c;
@@ -1506,7 +1553,7 @@
                     const current = queue.shift();
                     group.add(current);
                     const [r, c] = current.split('-').map(Number);
-                    
+
                     [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr, nc]) => {
                         const nextCoord = `${nr}-${nc}`;
                         if (matchSet.has(nextCoord) && !visited.has(nextCoord) && gameState.board[nr]?.[nc]?.type === gemType) {
@@ -1531,15 +1578,22 @@
                     activatedAny = true;
                     showSuperIconPopup(gemData.superType);
                     switch (gemData.superType) {
-                        case 'striped-h': for (let i = 0; i < levelConfig.cols; i++) explosionSet.add(`${r}-${i}`); break;
-                        case 'striped-v': for (let i = 0; i < levelConfig.rows; i++) explosionSet.add(`${i}-${c}`); break;
+                        case 'striped-h':
+                            animateLineClear(r, c, 'h');
+                            for (let i = 0; i < levelConfig.cols; i++) explosionSet.add(`${r}-${i}`);
+                            break;
+                        case 'striped-v':
+                            animateLineClear(r, c, 'v');
+                            for (let i = 0; i < levelConfig.rows; i++) explosionSet.add(`${i}-${c}`);
+                            break;
                         case 'wrapped':
+                            animateShockwave(r, c);
                             for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
                                 if (r + dr >= 0 && r + dr < levelConfig.rows && c + dc >= 0 && c + dc < levelConfig.cols) explosionSet.add(`${r+dr}-${c+dc}`);
                             }
                             break;
                     }
-                    gemData.superType = null; 
+                    gemData.superType = null;
                 }
             }
             if (activatedAny) {
@@ -1552,13 +1606,14 @@
             const explosionSet = new Set();
             const gem1 = gameState.board[r1][c1];
             const gem2 = gameState.board[r2][c2];
-            
+
             if (!gem1 || !gem2) {
                 console.error("Tentativa de combinar super ícones inexistentes.");
                 return;
             }
 
             const types = [gem1.superType, gem2.superType].sort();
+            sounds.combo.triggerAttackRelease();
 
             // Limpa os ícones originais do tabuleiro imediatamente
             gameState.board[r1][c1] = null;
@@ -1638,9 +1693,9 @@
             // Esta função trata APENAS de trocas de Bomba de Cor + peça REGULAR.
             const bombCoord = gameState.board[r1][c1]?.superType === 'color-bomb' ? {r:r1, c:c1} : {r:r2, c:c2};
             const targetGem = gameState.board[r1][c1]?.superType !== 'color-bomb' ? gameState.board[r1][c1] : gameState.board[r2][c2];
-            
+
             const explosionSet = new Set();
-            
+
             showSuperIconPopup('color-bomb');
             if (targetGem) { // targetGem será uma peça regular
                 const typeToClear = targetGem.type;
@@ -1648,7 +1703,7 @@
                     if (gem?.type === typeToClear) explosionSet.add(`${r}-${c}`);
                 }));
             }
-            
+
             // Adiciona a bomba e a peça alvo à explosão para serem removidas
             explosionSet.add(`${r1}-${c1}`);
             explosionSet.add(`${r2}-${c2}`);
@@ -1660,25 +1715,43 @@
 
         async function explodeGems(matches, chain, bonus = 0) {
             if (matches.size === 0) return 0;
-            
+
             // Esta função agora destrói peças bloqueadas diretamente.
             // A lógica de apenas desbloquear foi removida conforme a nova instrução.
             const points = (matches.size * 10 * chain) + bonus;
-            
+
             const coords = Array.from(matches).map(c => c.split('-').map(Number));
             const avgR = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
             const avgC = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
-            
+
             showPointsAnimation(points, avgR, avgC, bonus > 0);
             await animateScore(gameState.score + points);
-            
+
             const pitch = Tone.Frequency("C4").transpose(chain - 1);
             sounds.match.triggerAttackRelease(pitch, '8n');
-            
+
             for (const coord of matches) {
                 const [r, c] = coord.split('-').map(Number);
                 const gemElement = document.querySelector(`.gem[data-r='${r}'][data-c='${c}']`);
                 if (gemElement) {
+                    const gemData = gameState.board[r]?.[c];
+                    if (gemData) {
+                        const svg = ICONS[gemData.type];
+                        const match = svg.match(/fill="url\(#(\w+)\)"/);
+                        let color = '#ccc'; // Default color
+                        if (match) {
+                            const gradientId = match[1];
+                            const gradient = document.getElementById(gradientId);
+                            if (gradient) {
+                                const stop = gradient.querySelector('stop[offset="100%"]');
+                                if (stop) {
+                                    color = stop.style.stopColor;
+                                }
+                            }
+                        }
+                        createParticleExplosion(r, c, color);
+                    }
+
                     gemElement.classList.remove('is-locked');
                     gemElement.classList.add('is-exploding');
                 }
@@ -1710,7 +1783,7 @@
                 }
             });
         }
-        
+
         function showSuperIconPopup(superType) {
             const popup = document.getElementById('super-icon-popup');
             popup.textContent = SUPER_ICON_MESSAGES[superType];
@@ -1724,7 +1797,7 @@
             popup.style.display = 'block';
             setTimeout(() => { popup.style.display = 'none'; }, 2000);
         }
-        
+
         function checkGameEnd() {
             if (gameState.isLocked) return;
             const levelConfig = LEVELS[gameState.currentLevel];
@@ -1761,22 +1834,22 @@
             const levelConfig = LEVELS[gameState.currentLevel];
             const character = levelConfig.character;
             const modal = document.getElementById('level-complete-modal');
-            
+
             modal.querySelector('#complete-char-img').src = character.img;
             document.getElementById('level-score-display').textContent = gameState.score;
             document.getElementById('final-score').textContent = gameState.score;
             let message = (character.message && levelConfig.isBoss) ? character.message : (character.messages ? character.messages[(levelConfig.level - 1) % 10] : `Mais um passo para derrotar ${character.name}!`);
             modal.querySelector('#complete-char-message').textContent = message;
-            
+
             const nextLevelBtn = document.getElementById('next-level-btn');
             nextLevelBtn.classList.add('hidden');
             modal.style.display = 'flex';
-            
+
             await animateFinalScore();
 
             const oldTotalScore = gameState.totalScore;
             gameState.totalScore += gameState.score;
-            
+
             const oldMilestoneLives = Math.floor(oldTotalScore / 10000);
             const newMilestoneLives = Math.floor(gameState.totalScore / 10000);
             const livesEarned = newMilestoneLives - oldMilestoneLives;
@@ -1784,7 +1857,7 @@
                 gameState.lives += livesEarned;
                 showBonusPopup(`+${livesEarned} Vida(s)!`);
             }
-            
+
             if (gameState.currentLevel === gameState.highestLevel) {
                 gameState.highestLevel++;
             }
@@ -1792,7 +1865,7 @@
                 gameState.lives++;
             }
             await saveGameData();
-            
+
             setTimeout(() => {
                 modal.style.display = 'none';
                 if (levelConfig.level === 61) {
@@ -1820,7 +1893,7 @@
                 let totalStriped = Object.values(gameState.stats.total.striped || {}).reduce((a, b) => a + b, 0);
                 totalSuperIcons = totalStriped + (gameState.stats.total.wrapped || 0) + (gameState.stats.total.colorBomb || 0);
             }
-            
+
             document.getElementById('summary-world-total-score').textContent = gameState.totalScore.toLocaleString();
             document.getElementById('summary-world-play-time').textContent = (gameState.totalPlayTimeMinutes / 60).toFixed(1) + 'h';
             document.getElementById('summary-world-super-icons').textContent = totalSuperIcons.toLocaleString();
@@ -1857,7 +1930,7 @@
         function showGameCompleteModal() {
             stopMusic();
             const modal = document.getElementById('game-complete-modal');
-            
+
             let totalStriped = 0;
             if (gameState.stats && gameState.stats.total && gameState.stats.total.striped) {
                 totalStriped = Object.values(gameState.stats.total.striped).reduce((a, b) => a + b, 0);
@@ -1889,13 +1962,13 @@
                 for (let i = 0; i < bonusValue; i++) {
                     bonusPoints += 10;
                     gameState.score += 10;
-                    
+
                     if(bonusScoreDisplay) bonusScoreDisplay.textContent = bonusPoints;
                     if(finalScoreDisplay) finalScoreDisplay.textContent = gameState.score;
-                    
+
                     const pitch = Tone.Frequency("C5").transpose(i % 12);
                     sounds.bonus.triggerAttackRelease(pitch, "32n");
-                    
+
                     await delay(delayTime);
                 }
             }
@@ -1920,11 +1993,11 @@
             sounds.lose.triggerAttackRelease("A3", "4n", now + 0.1);
             sounds.lose.triggerAttackRelease("F#3", "4n", now + 0.2);
             sounds.lose.triggerAttackRelease("C3", "4n", now + 0.3);
-            
+
             const modal = document.getElementById('game-over-modal');
             const buttonsContainer = document.getElementById('game-over-buttons');
             buttonsContainer.innerHTML = ''; // Limpar botões antigos
-            
+
             document.getElementById('game-over-message').textContent = message;
 
             if (gameState.lives > 0) {
@@ -1974,10 +2047,10 @@
                 });
                 buttonsContainer.appendChild(backBtn);
             }
-            
+
             setTimeout(() => modal.style.display = 'flex', 500);
         }
-        
+
         function claimSocialLives(platform) {
             if (gameState.socialClaims[platform]) return;
 
@@ -1991,7 +2064,7 @@
                 }
                 livesAdded = true;
             }
-            
+
             saveGameData(); // Save state regardless
 
             if (livesAdded) {
@@ -2007,9 +2080,9 @@
         function delay(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
-        
+
         // --- LÓGICA DE VERIFICAÇÃO DE JOGADAS E DICAS ---
-        
+
         function clearHints() {
             document.querySelectorAll('.hint').forEach(el => el.classList.remove('hint'));
         }
@@ -2047,13 +2120,13 @@
 
         function wouldMatch(r1, c1, r2, c2) {
             if (!gameState.board[r1] || !gameState.board[r1][c1] || !gameState.board[r2] || !gameState.board[r2][c2]) return false;
-            
+
             const boardCopy = gameState.board.map(row => row.map(gem => (gem ? {...gem} : null)));
 
             const temp = boardCopy[r1][c1];
             boardCopy[r1][c1] = boardCopy[r2][c2];
             boardCopy[r2][c2] = temp;
-            
+
             const originalBoard = gameState.board;
             gameState.board = boardCopy;
             const hasMatch = findMatches().size > 0;
@@ -2065,7 +2138,7 @@
         function checkForPossibleMoves() {
             return findPossibleMove() !== null;
         }
-        
+
         async function reshuffleBoard(isSilent = false, isAutomatic = false) {
             gameState.isLocked = true;
             if (isAutomatic) {
@@ -2085,7 +2158,7 @@
                     const j = Math.floor(Math.random() * (i + 1));
                     [flatBoard[i], flatBoard[j]] = [flatBoard[j], flatBoard[i]];
                 }
-                
+
                 // Coloca as peças baralhadas de volta no tabuleiro
                 let flatIndex = 0;
                 for (let r = 0; r < levelConfig.rows; r++) {
@@ -2097,7 +2170,7 @@
                 }
                 attempts++;
             } while ((findMatches().size > 0 || !checkForPossibleMoves()) && attempts < 20);
-            
+
             renderBoard();
             await delay(300);
             const newMatches = findMatches();
@@ -2166,7 +2239,7 @@
                 if (gameState.lives < 5 && gameState.livesOutTimestamp) {
                     const timePassed = Date.now() - gameState.livesOutTimestamp;
                     const livesGained = Math.floor(timePassed / SIX_HOURS);
-                    
+
                     if (livesGained > 0) {
                         gameState.lives = Math.min(5, gameState.lives + livesGained);
                         if (gameState.lives >= 5) {
@@ -2181,7 +2254,7 @@
                 resetLocalGameState();
                 if (userId) await saveGameData(); // Cria o documento para o novo utilizador
             }
-            
+
             // Verifica e reinicia as estatísticas periódicas
             checkAndResetStats();
         }
@@ -2254,7 +2327,7 @@
 
         function incrementStat(superType, gemType) {
             if (!auth.currentUser || !gameState.stats) return; // Só regista para utilizadores com login
-            
+
             let statKey;
             let isStriped = false;
             if (superType.startsWith('striped')) {
@@ -2282,6 +2355,48 @@
 
 
         // --- ANIMAÇÃO DE PONTOS ---
+        function createParticleExplosion(r, c, color) {
+            const animationLayer = document.getElementById('animation-layer');
+            if (!animationLayer || !gameBoard.firstChild) return;
+
+            const gemSize = gameBoard.firstChild.offsetWidth;
+            const gap = 4;
+            const top = (r + 0.5) * (gemSize + gap);
+            const left = (c + 0.5) * (gemSize + gap);
+
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.backgroundColor = color;
+
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * (gemSize / 2);
+                const duration = 0.5 + Math.random() * 0.4;
+
+                particle.style.top = `${top}px`;
+                particle.style.left = `${left}px`;
+                particle.style.animationDuration = `${duration}s`;
+
+                // Animate particle movement with JS
+                let startTime = null;
+                function animateParticle(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const progress = (timestamp - startTime) / (duration * 1000);
+                    if (progress > 1) {
+                        particle.remove();
+                        return;
+                    }
+                    const currentX = left + Math.cos(angle) * distance * progress * 2;
+                    const currentY = top + Math.sin(angle) * distance * progress * 2;
+                    particle.style.transform = `translate(${currentX - left}px, ${currentY - top}px) scale(${1-progress})`;
+                    requestAnimationFrame(animateParticle);
+                }
+
+                animationLayer.appendChild(particle);
+                requestAnimationFrame(animateParticle);
+            }
+        }
+
         function showPointsAnimation(amount, r, c, isSpecial = false) {
             const gameBoardContainer = document.getElementById('game-board-container');
             if (!gameBoardContainer || !gameBoard.firstChild) return;
@@ -2301,11 +2416,11 @@
             // Calculate the position based on the grid, including gaps and paddings
             pointPopup.style.top = `${offset + r * (gemSize + gap)}px`;
             pointPopup.style.left = `${offset + c * (gemSize + gap)}px`;
-            
+
             gameBoardContainer.appendChild(pointPopup);
             setTimeout(() => pointPopup.remove(), 1000);
         }
-        
+
         async function animateScore(targetScore) {
             const startScore = gameState.score;
             gameState.score = targetScore;
@@ -2325,11 +2440,70 @@
             requestAnimationFrame(animationStep);
         }
 
+        async function animateLineClear(row, col, direction) {
+            const animationLayer = document.getElementById('animation-layer');
+            if (!animationLayer || !gameBoard.firstChild) return;
+
+            const gemSize = gameBoard.firstChild.offsetWidth;
+            const gap = 4;
+            const line = document.createElement('div');
+            line.style.position = 'absolute';
+            line.style.backgroundColor = 'white';
+            line.style.boxShadow = '0 0 15px 10px rgba(255, 255, 255, 0.7)';
+            line.style.zIndex = '15';
+            line.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+
+            if (direction === 'h') {
+                line.style.top = `${(row + 0.5) * (gemSize + gap) - 5}px`;
+                line.style.left = '0';
+                line.style.width = '100%';
+                line.style.height = '10px';
+                line.style.transform = 'scaleX(0)';
+            } else {
+                line.style.left = `${(col + 0.5) * (gemSize + gap) - 5}px`;
+                line.style.top = '0';
+                line.style.height = '100%';
+                line.style.width = '10px';
+                line.style.transform = 'scaleY(0)';
+            }
+
+            animationLayer.appendChild(line);
+
+            await delay(50); // Short delay to ensure the element is in the DOM before animating
+            line.style.transform = 'scaleX(1) scaleY(1)';
+
+            await delay(300);
+            line.style.opacity = '0';
+            await delay(100);
+            line.remove();
+        }
+
+        async function animateShockwave(r, c) {
+            const animationLayer = document.getElementById('animation-layer');
+            if (!animationLayer || !gameBoard.firstChild) return;
+
+            const gemSize = gameBoard.firstChild.offsetWidth;
+            const gap = 4;
+            const top = (r + 0.5) * (gemSize + gap);
+            const left = (c + 0.5) * (gemSize + gap);
+
+            const shockwave = document.createElement('div');
+            shockwave.className = 'shockwave';
+            shockwave.style.width = `${gemSize * 1.5}px`;
+            shockwave.style.height = `${gemSize * 1.5}px`;
+            shockwave.style.top = `${top - (gemSize * 0.75)}px`;
+            shockwave.style.left = `${left - (gemSize * 0.75)}px`;
+
+            animationLayer.appendChild(shockwave);
+            await delay(400);
+            shockwave.remove();
+        }
+
         async function animateBoardClear(r, c) {
             const animationLayer = document.getElementById('animation-layer');
             const ripple = document.createElement('div');
             ripple.className = 'board-clear-ripple';
-            
+
             // Posição da ondulação baseada na posição do clique
             const gemSize = gameBoard.firstChild.offsetWidth;
             const gap = 4;
@@ -2337,12 +2511,12 @@
             const left = (c + 0.5) * (gemSize + gap);
             ripple.style.top = `${top}px`;
             ripple.style.left = `${left}px`;
-            
+
             animationLayer.appendChild(ripple);
             await delay(700);
             ripple.remove();
         }
-        
+
         // --- RENDERIZAÇÃO DE ECRÃS ---
         function renderMainMenu(user) {
             stopMusic();
@@ -2461,7 +2635,7 @@
                 });
                 finalLevelContainer.appendChild(finalLevelBtn);
             }
-            
+
             unlockBtn.addEventListener('click', () => {
                 document.getElementById('unlock-modal').style.display = 'flex';
             });
@@ -2513,7 +2687,7 @@
             appContainer.appendChild(template.content.cloneNode(true));
 
             gameBoard = document.getElementById('game-board');
-            
+
             document.getElementById('quit-level-btn').addEventListener('click', () => {
                 clearTimeout(gameState.hintTimer);
                 clearInterval(gameState.timerInterval);
@@ -2522,19 +2696,19 @@
                 stopMusic();
                 renderWorldMap(Math.floor(gameState.currentLevel / 10));
             });
-            
+
             document.getElementById('help-btn').addEventListener('click', () => {
                 document.getElementById('help-modal').style.display = 'flex';
             });
-            
+
             // Preencher a legenda de ícones
             const legendContainer = document.getElementById('icon-legend-container');
             legendContainer.innerHTML = '';
 
             const heroIconMap = [
-                { hero: HEROES[0], icon: ICONS[0] }, 
-                { hero: HEROES[1], icon: ICONS[1] }, 
-                { hero: HEROES[2], icon: ICONS[2] }, 
+                { hero: HEROES[0], icon: ICONS[0] },
+                { hero: HEROES[1], icon: ICONS[1] },
+                { hero: HEROES[2], icon: ICONS[2] },
             ];
             heroIconMap.forEach(item => {
                 const row = document.createElement('div');
@@ -2706,7 +2880,7 @@
 
                 players.forEach((player) => {
                     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-                    
+
                     let displayValue;
                     if (fieldPath === 'gameCompleted') {
                          const score = player.totalScore || 0;
@@ -2721,7 +2895,7 @@
                              displayValue = `<span class="font-bold text-yellow-400">${score.toLocaleString()}</span>`;
                         }
                     }
-                    
+
                     rankHTML += `
                         <li class="p-2 rounded-lg ${rank <= 3 ? 'bg-yellow-800' : 'bg-gray-700'} flex items-center">
                             <span class="font-bold text-lg mr-4 w-10 text-center">${medal}</span>
@@ -2741,7 +2915,7 @@
                 content.innerHTML = '<p class="text-center text-red-500">Não foi possível carregar o ranking. Tenta mais tarde.</p>';
             }
         }
-        
+
         function showGlossary() {
             const modal = document.getElementById('glossary-modal');
             const content = document.getElementById('glossary-content');
@@ -2766,10 +2940,10 @@
         function showHistory() {
             const modal = document.getElementById('history-modal');
             const content = document.getElementById('history-content');
-            
+
             const heroesSection = content.querySelector('#heroes-section');
             const villainsSection = content.querySelector('#villains-section');
-            
+
             heroesSection.innerHTML = '<h3 class="text-2xl font-bold text-green-400 mt-6">Os Heróis</h3>';
             villainsSection.innerHTML = '<h3 class="text-2xl font-bold text-red-400 mt-6">Os Vilões</h3>';
 
@@ -2814,4 +2988,3 @@
     </script>
 </body>
 </html>
-
