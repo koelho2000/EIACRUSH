@@ -1258,8 +1258,11 @@
         function renderBoard() {
             if (!gameBoard) return;
             gameBoard.innerHTML = '';
-            const gemSize = gameBoard.offsetWidth / LEVELS[gameState.currentLevel].cols;
+            const containerWidth = gameBoard.parentElement.offsetWidth;
+            const cols = LEVELS[gameState.currentLevel].cols;
             const gap = 4;
+            const padding = 8;
+            const gemSize = (containerWidth - (padding * 2) - (gap * (cols - 1))) / cols;
             gameState.board.forEach((row, r) => {
                 row.forEach((gemData, c) => {
                     const cell = document.createElement('div');
@@ -1267,6 +1270,8 @@
                         cell.classList.add('gem');
                         cell.dataset.r = r;
                         cell.dataset.c = c;
+                        cell.style.width = `${gemSize}px`;
+                        cell.style.height = `${gemSize}px`;
                         cell.style.top = `${r * (gemSize + gap)}px`;
                         cell.style.left = `${c * (gemSize + gap)}px`;
                         cell.style.position = 'absolute';
