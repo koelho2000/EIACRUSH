@@ -211,6 +211,17 @@
                 opacity: 0;
             }
         }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .gem-fall {
+            transition: top 0.3s ease-out;
+        }
+        .gem-swap {
+            transition: top 0.3s ease-out, left 0.3s ease-out;
+        }
         /* Mapa de Níveis */
         .level-node {
             width: 50px; height: 50px;
@@ -872,6 +883,9 @@
         });
 
         // --- ESTADO DO JOGO ---
+        let draggedGem = null;
+        let droppedOnGem = null;
+
         let gameState = {
             currentLevel: 0,
             score: 0,
@@ -1244,6 +1258,8 @@
         function renderBoard() {
             if (!gameBoard) return;
             gameBoard.innerHTML = '';
+            const gemSize = gameBoard.offsetWidth / LEVELS[gameState.currentLevel].cols;
+            const gap = 4;
             gameState.board.forEach((row, r) => {
                 row.forEach((gemData, c) => {
                     const cell = document.createElement('div');
@@ -1251,12 +1267,20 @@
                         cell.classList.add('gem');
                         cell.dataset.r = r;
                         cell.dataset.c = c;
+                        cell.style.top = `${r * (gemSize + gap)}px`;
+                        cell.style.left = `${c * (gemSize + gap)}px`;
+                        cell.style.position = 'absolute';
                         cell.innerHTML = ICONS[gemData.type];
                         if (gemData.superType) {
                             cell.classList.add(`super-${gemData.superType}`);
                         }
                         if (gemData.isLocked) {
                             cell.classList.add('is-locked');
+                        } else {
+                            cell.setAttribute('draggable', true);
+                            cell.addEventListener('dragstart', handleDragStart);
+                            cell.addEventListener('dragover', handleDragOver);
+                            cell.addEventListener('drop', handleDrop);
                         }
                         cell.addEventListener('click', gemClick);
                     } else {
@@ -1265,6 +1289,31 @@
                     gameBoard.appendChild(cell);
                 });
             });
+        }
+
+        // --- LÓGICA DE MOVIMENTO (DRAG & DROP) ---
+
+        function handleDragStart(e) {
+            draggedGem = this;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            droppedOnGem = this;
+
+            const r1 = parseInt(draggedGem.dataset.r);
+            const c1 = parseInt(draggedGem.dataset.c);
+            const r2 = parseInt(droppedOnGem.dataset.r);
+            const c2 = parseInt(droppedOnGem.dataset.c);
+
+            const isAdjacent = Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+            if (isAdjacent) {
+                await swap(r1, c1, r2, c2);
+            }
         }
 
         // --- LÓGICA DE MOVIMENTO (CLIQUE) ---
@@ -1359,19 +1408,51 @@
                     updateUI();
                 }
 
+                const gem1Element = document.querySelector(`.gem[data-r='${r1}'][data-c='${c1}']`);
+                const gem2Element = document.querySelector(`.gem[data-r='${r2}'][data-c='${c2}']`);
+
+                if (gem1Element && gem2Element) {
+                    gem1Element.classList.add('gem-swap');
+                    gem2Element.classList.add('gem-swap');
+
+                    const tempTop = gem1Element.style.top;
+                    const tempLeft = gem1Element.style.left;
+                    gem1Element.style.top = gem2Element.style.top;
+                    gem1Element.style.left = gem2Element.style.left;
+                    gem2Element.style.top = tempTop;
+                    gem2Element.style.left = tempLeft;
+
+                    gem1Element.dataset.r = r2;
+                    gem1Element.dataset.c = c2;
+                    gem2Element.dataset.r = r1;
+                    gem2Element.dataset.c = c1;
+                }
+
                 gameState.board[r1][c1] = gem2;
                 gameState.board[r2][c2] = gem1;
 
                 if (!isUndo) sounds.swap.triggerAttackRelease('G5', '8n');
-                renderBoard();
                 await delay(300);
+                if(gem1Element) gem1Element.classList.remove('gem-swap');
+                if(gem2Element) gem2Element.classList.remove('gem-swap');
 
                 const matches = findMatches();
                 if (matches.size > 0) {
                     await handleMatches(matches, {r: r2, c: c2});
                 } else if (!isUndo) {
-                     if (LEVELS[gameState.currentLevel].moves !== undefined) gameState.moves++;
+                    if (LEVELS[gameState.currentLevel].moves !== undefined) gameState.moves++;
                     updateUI();
+
+                    const gem1Element = document.querySelector(`.gem[data-r='${r1}'][data-c='${c1}']`);
+                    const gem2Element = document.querySelector(`.gem[data-r='${r2}'][data-c='${c2}']`);
+                    if(gem1Element) gem1Element.style.animation = 'shake 0.5s';
+                    if(gem2Element) gem2Element.style.animation = 'shake 0.5s';
+
+                    await delay(500);
+
+                    if(gem1Element) gem1Element.style.animation = '';
+                    if(gem2Element) gem2Element.style.animation = '';
+
                     await swap(r1, c1, r2, c2, true);
                 }
             } finally {
@@ -1768,20 +1849,30 @@
                 for (let r = levelConfig.rows - 1; r >= 0; r--) {
                     if (gameState.board[r][c] === null && emptyRow === null) emptyRow = r;
                     else if (gameState.board[r][c] !== null && emptyRow !== null) {
+                        const gemElement = document.querySelector(`.gem[data-r='${r}'][data-c='${c}']`);
+                        if(gemElement) {
+                            gemElement.classList.add('gem-fall');
+                            gemElement.dataset.r = emptyRow;
+                            gemElement.style.top = `${emptyRow * (gemElement.offsetHeight + 4)}px`;
+                        }
                         gameState.board[emptyRow][c] = gameState.board[r][c];
                         gameState.board[r][c] = null;
                         emptyRow--;
                     }
                 }
             }
+            await delay(300);
         }
 
         async function fillGems() {
-            gameState.board.forEach(row => {
-                for (let c = 0; c < row.length; c++) {
-                    if (row[c] === null) row[c] = { type: Math.floor(Math.random() * (ICONS.length - 1)), superType: null };
+            const levelConfig = LEVELS[gameState.currentLevel];
+            for (let r = 0; r < levelConfig.rows; r++) {
+                for (let c = 0; c < levelConfig.cols; c++) {
+                    if (gameState.board[r][c] === null) {
+                        gameState.board[r][c] = { type: Math.floor(Math.random() * (ICONS.length - 1)), superType: null };
+                    }
                 }
-            });
+            }
         }
 
         function showSuperIconPopup(superType) {
