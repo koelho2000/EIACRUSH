@@ -212,12 +212,30 @@
             }
         }
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+            0%, 100% { transform: translate(0, 0) rotate(0); }
+            25% { transform: translate(5px, 2px) rotate(-1deg); }
+            50% { transform: translate(-5px, -2px) rotate(1deg); }
+            75% { transform: translate(5px, 2px) rotate(-1deg); }
         }
         .gem-fall {
-            transition: top 0.3s ease-out;
+            transition: top 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045); /* easeInBack */
+        }
+        .gem-entering {
+            animation: gem-bounce 0.5s ease-out;
+        }
+        @keyframes gem-bounce {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.1); opacity: 1; }
+            80% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+        .super-gem-creation {
+            animation: new-super-gem 0.6s ease-in-out;
+        }
+        @keyframes new-super-gem {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4) rotate(15deg); box-shadow: 0 0 20px 10px #fef08a; }
+            100% { transform: scale(1) rotate(0); }
         }
         .gem-swap {
             transition: top 0.3s ease-out, left 0.3s ease-out;
@@ -317,6 +335,50 @@
                 height: 200%;
                 opacity: 0;
             }
+        }
+
+        /* Animações de Feedback de Obstáculos/Objetivos */
+        .ice-shatter::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20 20 L80 80 M20 80 L80 20" stroke-width="5" stroke="white" stroke-linecap="round" /></svg>');
+            animation: shatter-anim 0.4s forwards;
+        }
+        @keyframes shatter-anim {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .chain-break::after {
+            content: '⛓';
+            position: absolute;
+            font-size: 2rem;
+            color: #9ca3af;
+            animation: chain-break-anim 0.5s forwards;
+        }
+        @keyframes chain-break-anim {
+            0% { transform: scale(1) rotate(0); opacity: 1; }
+            100% { transform: scale(0.5) rotate(360deg); opacity: 0; }
+        }
+
+        .jelly-splat::before {
+            content: '';
+            position: absolute;
+            top: 10%; left: 10%; right: 10%; bottom: 10%;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            animation: splat-anim 0.3s forwards;
+        }
+        @keyframes splat-anim {
+            from { transform: scale(0); }
+            to { transform: scale(1.5); opacity: 0; }
+        }
+
+        .collect-fly {
+            position: fixed; /* Para voar sobre tudo */
+            z-index: 200;
+            transition: top 0.5s ease-in, left 0.5s ease-in, transform 0.5s ease-in;
         }
     </style>
 </head>
@@ -992,9 +1054,13 @@
             tick: new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 6, envelope: { attack: 0.001, decay: 0.2, sustain: 0 } }).toDestination(),
             createSuper: new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 } }).toDestination(),
             combo: new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.01, decay: 0.4, release: 0.2 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).toDestination(),
-            uiClick: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination()
+            uiClick: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
+            iceBreak: new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0 } }).toDestination(),
+            chainBreak: new Tone.MetalSynth({ frequency: 400, envelope: { attack: 0.001, decay: 0.1, release: 0.1 }, harmonicity: 2.5, modulationIndex: 10, resonance: 800, octaves: 0.5 }).toDestination(),
+            jellySplat: new Tone.FMSynth({ harmonicity: 3, modulationIndex: 10, envelope: { attack: 0.01, decay: 0.2, release: 0.2 } }).toDestination()
         };
         sounds.tick.volume.value = -12;
+        sounds.iceBreak.volume.value = -10;
 
         // --- CONTEÚDO EDUCATIVO ---
         const ENERGY_FACTS = [
@@ -1372,6 +1438,10 @@
                         if (gemData.superType) {
                             cell.classList.add(`super-${gemData.superType}`);
                         }
+                        if (gemData.isNew) {
+                            cell.classList.add('gem-entering');
+                            delete gemData.isNew; // Remove the flag after applying the animation
+                        }
                         if (gemData.jelly) {
                             const jellyDiv = document.createElement('div');
                             jellyDiv.className = 'jelly';
@@ -1730,6 +1800,13 @@
                        incrementStat(superType, gemData.type);
                        matchGroup.forEach(coord => allMatchedGems.add(coord));
                        allMatchedGems.delete(`${r}-${c}`);
+
+                       // Animate the creation
+                        const gemElement = document.querySelector(`.gem[data-r='${r}'][data-c='${c}']`);
+                        if(gemElement) {
+                            gemElement.classList.add('super-gem-creation');
+                            setTimeout(() => gemElement.classList.remove('super-gem-creation'), 600);
+                        }
                     }
                 } else {
                     matchGroup.forEach(coord => allMatchedGems.add(coord));
@@ -1951,11 +2028,14 @@
                 const gemData = gameState.board[r]?.[c];
                 if (gemData && gemData.ice) {
                     gemData.ice = false;
+                    sounds.iceBreak.triggerAttackRelease("8n");
                     const iceDiv = document.querySelector(`.gem[data-r='${r}'][data-c='${c}'] .ice`);
-                    if (iceDiv) iceDiv.remove();
+                    if (iceDiv) {
+                        iceDiv.classList.add('ice-shatter');
+                        setTimeout(() => iceDiv.remove(), 400);
+                    }
                 }
             }
-
 
             for (const coord of matches) {
                 const [r, c] = coord.split('-').map(Number);
@@ -1965,16 +2045,27 @@
                 if (gemElement && gemData) {
                     if (LEVELS[gameState.currentLevel].collect && LEVELS[gameState.currentLevel].collect[gemData.type] !== undefined) {
                         gameState.collected[gemData.type] = (gameState.collected[gemData.type] || 0) + 1;
+                        animateCollect(gemElement);
                     }
 
                     if (gemData.chains) {
                         gemData.chains = false;
+                        sounds.chainBreak.triggerAttackRelease("C3", "8n");
+                        const chainDiv = gemElement.querySelector('.chains');
+                        if (chainDiv) {
+                            chainDiv.classList.add('chain-break');
+                             setTimeout(() => chainDiv.remove(), 500);
+                        }
                     }
 
                     if (gemData.jelly) {
                         gemData.jelly = false;
+                        sounds.jellySplat.triggerAttackRelease("G2", "8n");
                         const jellyDiv = gemElement.querySelector('.jelly');
-                        if (jellyDiv) jellyDiv.remove();
+                        if (jellyDiv) {
+                           jellyDiv.classList.add('jelly-splat');
+                           setTimeout(() => jellyDiv.remove(), 300);
+                        }
                     }
 
                     const svg = ICONS[gemData.type];
@@ -2026,13 +2117,16 @@
 
         async function fillGems() {
             const levelConfig = LEVELS[gameState.currentLevel];
+            let madeChange = false;
             for (let r = 0; r < levelConfig.rows; r++) {
                 for (let c = 0; c < levelConfig.cols; c++) {
                     if (gameState.board[r][c] === null) {
-                        gameState.board[r][c] = { type: Math.floor(Math.random() * (ICONS.length - 1)), superType: null };
+                        madeChange = true;
+                        gameState.board[r][c] = { type: Math.floor(Math.random() * (ICONS.length - 1)), superType: null, isNew: true };
                     }
                 }
             }
+            if(madeChange) renderBoard();
         }
 
         function showSuperIconPopup(superType) {
@@ -3276,6 +3370,40 @@
             });
 
             modal.style.display = 'flex';
+        }
+
+        function animateCollect(gemElement) {
+            const animationLayer = document.getElementById('animation-layer');
+            const objectiveDisplay = document.getElementById('objective-display');
+            if (!animationLayer || !objectiveDisplay) return;
+
+            const flyingGem = gemElement.cloneNode(true);
+            const startRect = gemElement.getBoundingClientRect();
+            const endRect = objectiveDisplay.getBoundingClientRect();
+
+            flyingGem.style.position = 'fixed';
+            flyingGem.style.left = `${startRect.left}px`;
+            flyingGem.style.top = `${startRect.top}px`;
+            flyingGem.style.width = `${startRect.width}px`;
+            flyingGem.style.height = `${startRect.height}px`;
+            flyingGem.classList.add('collect-fly');
+
+            animationLayer.appendChild(flyingGem);
+
+            // Delay to ensure the element is in the DOM before animating
+            setTimeout(() => {
+                flyingGem.style.left = `${endRect.left + (endRect.width / 2)}px`;
+                flyingGem.style.top = `${endRect.top + (endRect.height / 2)}px`;
+                flyingGem.style.transform = 'scale(0.2)';
+                flyingGem.style.opacity = '0';
+            }, 50);
+
+            setTimeout(() => {
+                flyingGem.remove();
+                // Optional: add a little flash/pulse on the objective counter
+                objectiveDisplay.style.animation = 'pulse-light 0.3s';
+                setTimeout(() => objectiveDisplay.style.animation = '', 300);
+            }, 550);
         }
 
         window.onload = () => {
