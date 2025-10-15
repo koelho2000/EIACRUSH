@@ -222,6 +222,36 @@
         .gem-swap {
             transition: top 0.3s ease-out, left 0.3s ease-out;
         }
+        .jelly {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 20%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        .ice {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(173, 216, 230, 0.5);
+            border: 2px solid #add8e6;
+            border-radius: 20%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .chains {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><line x1="0" y1="0" x2="100" y2="100" stroke="gray" stroke-width="10"/><line x1="0" y1="100" x2="100" y2="0" stroke="gray" stroke-width="10"/></svg>');
+            background-size: 80%;
+            background-repeat: no-repeat;
+            background-position: center;
+            pointer-events: none;
+            z-index: 2;
+        }
         /* Mapa de Níveis */
         .level-node {
             width: 50px; height: 50px;
@@ -403,9 +433,9 @@
                     <div class="text-sm opacity-80">Pontos</div>
                     <div id="game-score-display" class="text-2xl font-bold">0</div>
                 </div>
-                <div>
-                    <div class="text-sm opacity-80">Objetivo</div>
-                    <div id="game-target-display" class="text-2xl font-bold">5000</div>
+                <div id="objective-display">
+                     <div class="text-sm opacity-80">Objetivo</div>
+                     <div id="game-target-display" class="text-2xl font-bold">5000</div>
                 </div>
                 <div id="moves-or-time-display">
                     <div class="text-sm opacity-80">Jogadas</div>
@@ -444,6 +474,7 @@
     <div id="level-complete-modal" class="modal">
         <div class="modal-content bg-green-600 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4">
             <h2 class="text-4xl font-bold mb-2">Nível Concluído!</h2>
+            <div id="star-display" class="flex justify-center my-4"></div>
             <img id="complete-char-img" src="https://placehold.co/150x150/10b981/ffffff?text=EIA" class="mx-auto mb-4 rounded-full border-4 border-green-300">
 
             <div id="bonus-points-container" class="text-lg mb-4">
@@ -738,7 +769,7 @@
 
         const HEROES = [
             {
-                name: 'Sunny', color: 'yellow', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmNTllMGIiLz48L3N2Zz4=',
+                name: 'Sunny', color: 'yellow', img: 'https://placehold.co/150x150/f59e0b/ffffff?text=S',
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Sunny%5BRise&Shine%5D%23EIA.mp3",
                 description: 'Sunny é a personificação da energia solar. Sempre otimista, irradia calor e positividade, iluminando o caminho para um futuro mais limpo.',
                 messages: [
@@ -748,7 +779,7 @@
                 ]
             },
             {
-                name: 'Breezy', color: 'blue', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM2MGE1ZmEiLz48L3N2Zz4=',
+                name: 'Breezy', color: 'blue', img: 'https://placehold.co/150x150/60a5fa/ffffff?text=B',
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Ride%20the%20Wind%20-%20Breezy's%20Song.mp3",
                 description: 'Breezy comanda a força dos ventos. É ágil, rápido e livre, representando o poder imparável da energia eólica para mover o mundo.',
                 messages: [
@@ -758,7 +789,7 @@
                 ]
             },
             {
-                name: 'Splashy', color: 'indigo', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ZjQ2ZTUiLz48L3N2Zz4=',
+                name: 'Splashy', color: 'indigo', img: 'https://placehold.co/150x150/4f46e5/ffffff?text=S',
                 music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Make%20a%20Splash!%20-%20Splashy%E2%80%99s%20Song.mp3",
                 description: 'Splashy representa a energia hídrica. Calmo mas poderoso, a sua força reside na constância e na capacidade de se adaptar e fluir.',
                 messages: [
@@ -770,19 +801,19 @@
         ];
 
         const VILLAINS = [
-            { name: 'Oily', color: 'gray', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0YjU1NjMiLz48L3N2Zz4=',
+            { name: 'Oily', color: 'gray', img: 'https://placehold.co/150x150/4b5563/ffffff?text=O',
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Fuel%20the%20Fire%20-%20Oily's%20Song.mp3",
             description: 'Oily é o barão do petróleo. Astuto e escorregadio, ele tenta manter o mundo preso ao passado, sujando tudo à sua volta.', message: "Achavas que ia ser fácil? O petróleo ainda manda aqui!" },
-            { name: 'Smokey', color: 'orange', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNmOTczMTYiLz48L3N2Zz4=',
+            { name: 'Smokey', color: 'orange', img: 'https://placehold.co/150x150/f97316/ffffff?text=S',
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Smokey%5BBurning-Strong%5D%23EIA.mp3",
             description: 'Smokey é a personificação da poluição do carvão. Deixa um rasto de fumo e cinza por onde passa, obscurecendo o futuro.', message: "O meu fumo vai-te deixar a tossir!" },
-            { name: 'Gassy', color: 'lime', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM4NGNjMTYiLz48L3N2Zz4=',
+            { name: 'Gassy', color: 'lime', img: 'https://placehold.co/150x150/84cc16/ffffff?text=G',
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Zoom,%20Boom,%20Whoosh!%20-%20Gassy%E2%80%99s%20Song.mp3",
             description: 'Gassy representa os gases de efeito estufa. É volátil e traiçoeiro, sempre a tentar aquecer o planeta com as suas emissões.', message: "Não vais conseguir aguentar este cheiro a derrota!" },
         ];
 
         const FINAL_BOSS = {
-            name: 'EIA Master', color: 'purple', img: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNhODU1ZjciLz48L3N2Zz4=',
+            name: 'EIA Master', color: 'purple', img: 'https://placehold.co/150x150/a855f7/ffffff?text=EIA',
             music: "https://github.com/koelho2000/EIACRUSH/raw/refs/heads/main/Energy%20in%20Action%20-%20song%20theme.mp3"
         };
 
@@ -840,10 +871,48 @@
                 rows,
                 cols,
                 targetScore: targetScore,
+                starScores: [Math.round(targetScore * 0.5), targetScore, Math.round(targetScore * 1.5)],
                 moves: moves,
                 character: character,
                 isBoss: isBossLevel,
             };
+
+            if (level === 3) {
+                config.jellyLayout = [
+                    "J J J J J J J",
+                    "J J J J J J J",
+                    "J J J J J J J",
+                    "J J J J J J J",
+                    "J J J J J J J",
+                    "J J J J J J J",
+                    "J J J J J J J",
+                ];
+            }
+            if (level === 5) {
+                config.collect = { 0: 10, 2: 10 }; // Collect 10 suns and 10 water drops
+            }
+            if (level === 7) {
+                config.iceLayout = [
+                    "I I I I I I I",
+                    "I _ _ _ _ _ I",
+                    "I _ _ _ _ _ I",
+                    "I _ _ _ _ _ I",
+                    "I _ _ _ _ _ I",
+                    "I _ _ _ _ _ I",
+                    "I I I I I I I",
+                ];
+            }
+            if (level === 9) {
+                config.chainLayout = [
+                    "C C C C C C C",
+                    "C _ _ _ _ _ C",
+                    "C _ _ _ _ _ C",
+                    "C _ _ _ _ _ C",
+                    "C _ _ _ _ _ C",
+                    "C _ _ _ _ _ C",
+                    "C C C C C C C",
+                ];
+            }
 
             if (isTimedLevel) {
                 config.time = 180;
@@ -901,6 +970,8 @@
             lives: 5,
             highestLevel: 0,
             livesOutTimestamp: null,
+            levelStars: {},
+            collected: {},
             socialClaims: {
                 tiktok: false,
                 instagram: false,
@@ -1067,13 +1138,20 @@
 
             modal.querySelector('#start-char-img').src = character.img;
             modal.querySelector('#start-level').textContent = levelConfig.level;
-            modal.querySelector('#start-target').textContent = levelConfig.targetScore;
 
             let extraText = '';
-            if (levelConfig.time) {
-                extraText += `<span class="font-bold text-red-400">Tempo: ${levelConfig.time}s</span>`;
+            if (levelConfig.jellyLayout) {
+                extraText += `<span>Objetivo: Limpar toda a geleia!</span>`;
+            } else if (levelConfig.collect) {
+                extraText += `<span>Objetivo: Recolher os ícones!</span>`;
             } else {
-                extraText += `<span>Jogadas: ${levelConfig.moves}</span>`;
+                extraText += `<span>Objetivo: <span id="start-target" class="font-bold">${levelConfig.targetScore}</span> pontos</span>`;
+            }
+
+            if (levelConfig.time) {
+                extraText += `<br><span class="font-bold text-red-400">Tempo: ${levelConfig.time}s</span>`;
+            } else {
+                extraText += `<br><span>Jogadas: ${levelConfig.moves}</span>`;
             }
             if (levelConfig.autoReshuffle) {
                 extraText += `<br><span class="font-bold text-yellow-400">Baralha a cada ${levelConfig.autoReshuffle / 1000}s!</span>`;
@@ -1088,6 +1166,7 @@
             levelStartTime = Date.now();
             const levelConfig = LEVELS[gameState.currentLevel];
             gameState.score = 0;
+            gameState.collected = {};
             gameState.moves = levelConfig.moves || 0;
             gameState.timer = levelConfig.time || null;
             clearInterval(gameState.timerInterval);
@@ -1164,7 +1243,28 @@
             if (characterNameDisplay) characterNameDisplay.textContent = LEVELS[gameState.currentLevel].character.name;
 
             const targetScoreDisplay = document.getElementById('game-target-display');
-            if (targetScoreDisplay) targetScoreDisplay.textContent = LEVELS[gameState.currentLevel].targetScore;
+            const objectiveDisplay = document.getElementById('objective-display');
+
+            if (LEVELS[gameState.currentLevel].jellyLayout) {
+                const jellyRemaining = gameState.board.flat().filter(gem => gem && gem.jelly).length;
+                objectiveDisplay.innerHTML = `
+                    <div class="text-sm opacity-80">Geleia</div>
+                    <div id="game-jelly-display" class="text-2xl font-bold">${jellyRemaining}</div>
+                `;
+            } else if (LEVELS[gameState.currentLevel].collect) {
+                let html = '<div class="text-sm opacity-80">Recolher</div><div class="flex justify-center items-center gap-2">';
+                for (const type in LEVELS[gameState.currentLevel].collect) {
+                    const remaining = Math.max(0, LEVELS[gameState.currentLevel].collect[type] - (gameState.collected[type] || 0));
+                    html += `<div class="flex items-center">${ICONS[type]}<span class="text-lg font-bold ml-1">${remaining}</span></div>`;
+                }
+                html += '</div>';
+                objectiveDisplay.innerHTML = html;
+            } else {
+                objectiveDisplay.innerHTML = `
+                    <div class="text-sm opacity-80">Objetivo</div>
+                    <div id="game-target-display" class="text-2xl font-bold">${LEVELS[gameState.currentLevel].targetScore}</div>
+                `;
+            }
 
             const gameLivesDisplay = document.getElementById('game-lives-display');
             if (gameLivesDisplay) gameLivesDisplay.textContent = gameState.lives;
@@ -1203,7 +1303,7 @@
 
         async function createBoard() {
             const levelConfig = LEVELS[gameState.currentLevel];
-            const { rows, cols, layout } = levelConfig;
+            const { rows, cols, layout, jellyLayout, iceLayout, chainLayout } = levelConfig;
             gameState.board = [];
             gameBoard.innerHTML = '';
             gameBoard.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -1212,41 +1312,34 @@
             let attempts = 0;
             do {
                 gameState.board = []; // Reset board on each attempt
-                if (layout) {
-                    for (let r = 0; r < rows; r++) {
-                        const row = [];
-                        for (let c = 0; c < cols; c++) {
-                            const char = layout[r].split(' ')[c];
-                            if (char === '_') {
-                                row.push(null);
-                            } else {
-                                let type;
-                                do {
-                                    type = Math.floor(Math.random() * (ICONS.length - 1));
-                                } while (
-                                    (c >= 2 && type === row[c - 1]?.type && type === row[c - 2]?.type) ||
-                                    (r >= 2 && type === gameState.board[r - 1]?.[c]?.type && type === gameState.board[r - 2]?.[c]?.type)
-                                );
-                                row.push({ type, superType: null, isLocked: char === 'L' });
-                            }
+                for (let r = 0; r < rows; r++) {
+                    const row = [];
+                    for (let c = 0; c < cols; c++) {
+                        // Check for empty spaces in a custom layout first
+                        if (layout && layout[r].split(' ')[c] === '_') {
+                            row.push(null);
+                            continue;
                         }
-                        gameState.board.push(row);
+
+                        let type;
+                        do {
+                            type = Math.floor(Math.random() * (ICONS.length - 1));
+                        } while (
+                            (c >= 2 && type === row[c - 1]?.type && type === row[c - 2]?.type) ||
+                            (r >= 2 && type === gameState.board[r - 1]?.[c]?.type && type === gameState.board[r - 2]?.[c]?.type)
+                        );
+
+                        const gemData = {
+                            type,
+                            superType: null,
+                            isLocked: layout && layout[r].split(' ')[c] === 'L',
+                            jelly: jellyLayout && jellyLayout[r].split(' ')[c] === 'J',
+                            ice: iceLayout && iceLayout[r].split(' ')[c] === 'I',
+                            chains: chainLayout && chainLayout[r].split(' ')[c] === 'C'
+                        };
+                        row.push(gemData);
                     }
-                } else {
-                    for (let r = 0; r < rows; r++) {
-                        const row = [];
-                        for (let c = 0; c < cols; c++) {
-                            let type;
-                            do {
-                                type = Math.floor(Math.random() * (ICONS.length - 1));
-                            } while (
-                                (c >= 2 && type === row[c - 1]?.type && type === row[c - 2]?.type) ||
-                                (r >= 2 && type === gameState.board[r - 1]?.[c]?.type && type === gameState.board[r - 2]?.[c]?.type)
-                            );
-                            row.push({ type, superType: null });
-                        }
-                        gameState.board.push(row);
-                    }
+                    gameState.board.push(row);
                 }
                 attempts++;
             } while ((findMatches().size > 0 || !checkForPossibleMoves()) && attempts < 20);
@@ -1278,6 +1371,21 @@
                         cell.innerHTML = ICONS[gemData.type];
                         if (gemData.superType) {
                             cell.classList.add(`super-${gemData.superType}`);
+                        }
+                        if (gemData.jelly) {
+                            const jellyDiv = document.createElement('div');
+                            jellyDiv.className = 'jelly';
+                            cell.appendChild(jellyDiv);
+                        }
+                        if (gemData.ice) {
+                            const iceDiv = document.createElement('div');
+                            iceDiv.className = 'ice';
+                            cell.appendChild(iceDiv);
+                        }
+                        if (gemData.chains) {
+                            const chainDiv = document.createElement('div');
+                            chainDiv.className = 'chains';
+                            cell.appendChild(chainDiv);
                         }
                         if (gemData.isLocked) {
                             cell.classList.add('is-locked');
@@ -1383,14 +1491,22 @@
 
         async function swap(r1, c1, r2, c2, isUndo = false) {
             if (gameState.isLocked && !isUndo) return;
-            if (gameState.board[r1][c1]?.isLocked || gameState.board[r2][c2]?.isLocked) return;
+            const gem1 = gameState.board[r1]?.[c1];
+            const gem2 = gameState.board[r2]?.[c2];
+
+            // Prevent swapping locked or iced gems. Chained gems can be swapped.
+            if (!gem1 || !gem2 || gem1.isLocked || gem2.isLocked || gem1.ice || gem2.ice) {
+                return;
+            }
+
+            // A chained gem cannot be swapped with an empty space.
+            if ((gem1.chains && !gem2) || (gem2.chains && !gem1)) {
+                return;
+            }
 
             gameState.isLocked = true;
 
             try {
-                const gem1 = gameState.board[r1][c1];
-                const gem2 = gameState.board[r2][c2];
-
                 // Prioridade 1: Dois Super Ícones
                 if (!isUndo && gem1?.superType && gem2?.superType) {
                     if (LEVELS[gameState.currentLevel].moves !== undefined) gameState.moves--;
@@ -1480,12 +1596,12 @@
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols - 2; c++) {
                     const gem1 = gameState.board[r][c];
-                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE || gem1.isLocked) continue;
+                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE || gem1.isLocked || gem1.chains) continue;
                     const gem2 = gameState.board[r][c + 1];
                     const gem3 = gameState.board[r][c + 2];
-                    if (gem2 && gem3 && !gem2.isLocked && !gem3.isLocked && gem1.type === gem2.type && gem2.type === gem3.type) {
+                    if (gem2 && gem3 && !gem2.isLocked && !gem2.chains && !gem3.isLocked && !gem3.chains && gem1.type === gem2.type && gem2.type === gem3.type) {
                         let i = c;
-                        while(i < cols && gameState.board[r][i]?.type === gem1.type && !gameState.board[r][i]?.isLocked) {
+                        while(i < cols && gameState.board[r][i]?.type === gem1.type && !gameState.board[r][i]?.isLocked && !gameState.board[r][i]?.chains) {
                             matches.add(`${r}-${i}`);
                             i++;
                         }
@@ -1495,12 +1611,12 @@
             for (let c = 0; c < cols; c++) {
                 for (let r = 0; r < rows - 2; r++) {
                     const gem1 = gameState.board[r][c];
-                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE || gem1.isLocked) continue;
+                    if (!gem1 || gem1.type === COLOR_BOMB_TYPE || gem1.isLocked || gem1.chains) continue;
                     const gem2 = gameState.board[r + 1][c];
                     const gem3 = gameState.board[r + 2][c];
-                     if (gem2 && gem3 && !gem2.isLocked && !gem3.isLocked && gem1.type === gem2.type && gem2.type === gem3.type) {
+                     if (gem2 && gem3 && !gem2.isLocked && !gem2.chains && !gem3.isLocked && !gem3.chains && gem1.type === gem2.type && gem2.type === gem3.type) {
                         let i = r;
-                        while(i < rows && gameState.board[i][c]?.type === gem1.type && !gameState.board[i][c]?.isLocked) {
+                        while(i < rows && gameState.board[i][c]?.type === gem1.type && !gameState.board[i][c]?.isLocked && !gameState.board[i][c]?.chains) {
                             matches.add(`${i}-${c}`);
                             i++;
                         }
@@ -1802,47 +1918,86 @@
         async function explodeGems(matches, chain, bonus = 0) {
             if (matches.size === 0) return 0;
 
-            // Esta função agora destrói peças bloqueadas diretamente.
-            // A lógica de apenas desbloquear foi removida conforme a nova instrução.
             const points = (matches.size * 10 * chain) + bonus;
 
             const coords = Array.from(matches).map(c => c.split('-').map(Number));
             const avgR = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
             const avgC = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
 
-            showPointsAnimation(points, avgR, avgC, bonus > 0);
-            await animateScore(gameState.score + points);
+            if (points > 0) {
+                showPointsAnimation(points, avgR, avgC, bonus > 0);
+                await animateScore(gameState.score + points);
+            }
 
             const pitch = Tone.Frequency("C4").transpose(chain - 1);
             sounds.match.triggerAttackRelease(pitch, '8n');
 
+            const iceToBreak = new Set();
+
+            for (const coord of matches) {
+                const [r, c] = coord.split('-').map(Number);
+                const gemData = gameState.board[r]?.[c];
+                if (!gemData) continue;
+
+                 [[r,c],[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr, nc]) => {
+                    if (gameState.board[nr]?.[nc]?.ice) {
+                        iceToBreak.add(`${nr}-${nc}`);
+                    }
+                });
+            }
+
+            for (const coord of iceToBreak) {
+                const [r, c] = coord.split('-').map(Number);
+                const gemData = gameState.board[r]?.[c];
+                if (gemData && gemData.ice) {
+                    gemData.ice = false;
+                    const iceDiv = document.querySelector(`.gem[data-r='${r}'][data-c='${c}'] .ice`);
+                    if (iceDiv) iceDiv.remove();
+                }
+            }
+
+
             for (const coord of matches) {
                 const [r, c] = coord.split('-').map(Number);
                 const gemElement = document.querySelector(`.gem[data-r='${r}'][data-c='${c}']`);
-                if (gemElement) {
-                    const gemData = gameState.board[r]?.[c];
-                    if (gemData) {
-                        const svg = ICONS[gemData.type];
-                        const match = svg.match(/fill="url\(#(\w+)\)"/);
-                        let color = '#ccc'; // Default color
-                        if (match) {
-                            const gradientId = match[1];
-                            const gradient = document.getElementById(gradientId);
-                            if (gradient) {
-                                const stop = gradient.querySelector('stop[offset="100%"]');
-                                if (stop) {
-                                    color = stop.style.stopColor;
-                                }
-                            }
-                        }
-                        createParticleExplosion(r, c, color);
+                const gemData = gameState.board[r]?.[c];
+
+                if (gemElement && gemData) {
+                    if (LEVELS[gameState.currentLevel].collect && LEVELS[gameState.currentLevel].collect[gemData.type] !== undefined) {
+                        gameState.collected[gemData.type] = (gameState.collected[gemData.type] || 0) + 1;
                     }
+
+                    if (gemData.chains) {
+                        gemData.chains = false;
+                    }
+
+                    if (gemData.jelly) {
+                        gemData.jelly = false;
+                        const jellyDiv = gemElement.querySelector('.jelly');
+                        if (jellyDiv) jellyDiv.remove();
+                    }
+
+                    const svg = ICONS[gemData.type];
+                    const match = svg.match(/fill="url\(#(\w+)\)"/);
+                    let color = '#ccc';
+                    if (match) {
+                        const gradientId = match[1];
+                        const gradient = document.getElementById(gradientId);
+                        if (gradient) {
+                            const stop = gradient.querySelector('stop[offset="100%"]');
+                            if (stop) color = stop.style.stopColor;
+                        }
+                    }
+                    createParticleExplosion(r, c, color);
 
                     gemElement.classList.remove('is-locked');
                     gemElement.classList.add('is-exploding');
                 }
+
                 if (gameState.board[r]) gameState.board[r][c] = null;
             }
+
+            updateUI();
             await delay(500);
             return points;
         }
@@ -1897,12 +2052,26 @@
         function checkGameEnd() {
             if (gameState.isLocked) return;
             const levelConfig = LEVELS[gameState.currentLevel];
-            if (gameState.score >= levelConfig.targetScore) {
+
+            let objectiveMet = false;
+            if (levelConfig.jellyLayout) {
+                objectiveMet = !gameState.board.flat().some(gem => gem && gem.jelly);
+            } else if (levelConfig.collect) {
+                objectiveMet = Object.keys(levelConfig.collect).every(type =>
+                    (gameState.collected[type] || 0) >= levelConfig.collect[type]
+                );
+            } else {
+                objectiveMet = gameState.score >= levelConfig.targetScore;
+            }
+
+            if (objectiveMet) {
                 levelWin();
-            } else if (levelConfig.moves !== undefined && gameState.moves <= 0) {
+                return;
+            }
+
+            if (levelConfig.moves !== undefined && gameState.moves <= 0) {
                 levelLose("Ficaste sem jogadas!");
             } else if (levelConfig.time !== undefined && gameState.timer <= 0) {
-                 // A função countdown já trata disto
             }
         }
 
@@ -1942,6 +2111,28 @@
             modal.style.display = 'flex';
 
             await animateFinalScore();
+
+            let stars = 0;
+            if (gameState.score >= levelConfig.starScores[2]) {
+                stars = 3;
+            } else if (gameState.score >= levelConfig.starScores[1]) {
+                stars = 2;
+            } else if (gameState.score >= levelConfig.starScores[0]) {
+                stars = 1;
+            }
+
+            const starDisplay = document.getElementById('star-display');
+            starDisplay.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const star = document.createElement('span');
+                star.innerHTML = i < stars ? '&#9733;' : '&#9734;';
+                star.className = `text-4xl ${i < stars ? 'text-yellow-400' : 'text-gray-400'}`;
+                starDisplay.appendChild(star);
+            }
+
+            if (!gameState.levelStars[gameState.currentLevel] || stars > gameState.levelStars[gameState.currentLevel]) {
+                gameState.levelStars[gameState.currentLevel] = stars;
+            }
 
             const oldTotalScore = gameState.totalScore;
             gameState.totalScore += gameState.score;
@@ -2288,6 +2479,7 @@
                 highestLevel: gameState.highestLevel,
                 livesOutTimestamp: gameState.livesOutTimestamp,
                 totalScore: gameState.totalScore,
+                levelStars: gameState.levelStars,
                 socialClaims: gameState.socialClaims,
                 stats: gameState.stats, // Adiciona as estatísticas
                 totalPlayTimeMinutes: gameState.totalPlayTimeMinutes
@@ -2328,6 +2520,7 @@
                 gameState.totalScore = data.totalScore || 0;
                 gameState.lives = data.lives !== undefined ? data.lives : 5;
                 gameState.livesOutTimestamp = data.livesOutTimestamp || null;
+                gameState.levelStars = data.levelStars || {};
                 gameState.socialClaims = data.socialClaims || { tiktok: false, instagram: false, youtube: false };
                 gameState.stats = data.stats || initializeStatsObject(); // Carrega ou inicializa as estatísticas
                 gameState.totalPlayTimeMinutes = data.totalPlayTimeMinutes || 0;
@@ -2368,10 +2561,11 @@
             gameState.lives = 5;
             gameState.highestLevel = 0;
             gameState.livesOutTimestamp = null;
+            gameState.levelStars = {};
+            gameState.collected = {};
             gameState.socialClaims = { tiktok: false, instagram: false, youtube: false };
             gameState.stats = initializeStatsObject();
             gameState.totalPlayTimeMinutes = 0;
-            localStorage.removeItem('eiaCrushGuestData');
         }
 
         // --- LÓGICA DE ESTATÍSTICAS ---
@@ -2635,8 +2829,9 @@
                 document.getElementById('login-btn').addEventListener('click', () => { document.getElementById('login-modal').style.display = 'flex'; });
                 document.getElementById('register-btn').addEventListener('click', () => { document.getElementById('register-modal').style.display = 'flex'; });
                 document.getElementById('guest-play-btn').addEventListener('click', () => {
-                    loadGameData(null); // Carrega dados de convidado ou inicia um novo
-                    renderWorldMap(0);
+                    loadGameData(null).then(() => {
+                        renderWorldMap(0);
+                    });
                 });
             }
             // Lógica dos botões do menu
@@ -2709,11 +2904,21 @@
                         renderGameScreen();
                         prepareLevel();
                     });
-                }
-                if (i < gameState.highestLevel) {
-                     node.classList.add('completed');
-                }
-                if (i > gameState.highestLevel) {
+
+                    if (i < gameState.highestLevel) {
+                        node.classList.add('completed');
+                        const stars = gameState.levelStars[i] || 0;
+                        const starContainer = document.createElement('div');
+                        starContainer.className = 'absolute -bottom-3 flex w-full justify-center';
+                        for (let j = 0; j < 3; j++) {
+                            const starEl = document.createElement('span');
+                            starEl.innerHTML = j < stars ? '&#9733;' : '&#9734;';
+                            starEl.className = `text-lg ${j < stars ? 'text-yellow-400' : 'text-gray-500'}`;
+                            starContainer.appendChild(starEl);
+                        }
+                        node.appendChild(starContainer);
+                    }
+                } else {
                     node.disabled = true;
                 }
                 levelGrid.appendChild(node);
@@ -2883,6 +3088,7 @@
         async function handleLogout() {
             await signOut(auth);
             stopMusic();
+            localStorage.removeItem('eiaCrushGuestData');
             // O onAuthStateChanged tratará de limpar o estado e renderizar o menu
         }
 
