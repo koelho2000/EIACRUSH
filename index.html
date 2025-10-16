@@ -299,6 +299,14 @@
             transform: translateY(-2px);
         }
 
+        .sugar-crush-active {
+            animation: sugar-crush-pulse 0.8s infinite ease-in-out;
+        }
+        @keyframes sugar-crush-pulse {
+            0%, 100% { box-shadow: inset 0 0 0 0 rgba(255, 255, 150, 0); }
+            50% { box-shadow: inset 0 0 30px 15px rgba(255, 255, 150, 0.4); }
+        }
+
         /* Animações de Combo */
         .board-clear-ripple {
             position: absolute;
@@ -484,6 +492,10 @@
                 </div>
                  <button id="help-btn" class="text-white bg-blue-500 hover:bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">?</button>
             </div>
+            <!-- Boosters In-Game -->
+            <div id="ingame-boosters" class="w-full max-w-lg flex justify-end p-1 gap-2">
+                <button id="gem-hammer-booster" class="hidden bg-yellow-500 hover:bg-yellow-600 text-black font-bold p-2 rounded-lg shadow-md">🔨</button>
+            </div>
             <!-- Game Board -->
             <div id="game-board-container" class="w-full max-w-lg aspect-square p-2 relative">
                 <div id="animation-layer" class="absolute inset-0 pointer-events-none z-10"></div>
@@ -518,6 +530,17 @@
             <h2 class="text-3xl font-bold mb-2">Nível <span id="start-level">1</span></h2>
             <p class="text-lg mb-4">Objetivo: <span id="start-target" class="font-bold">500</span> pontos</p>
             <div id="start-modal-extra-info" class="text-lg mb-4"></div>
+
+            <div class="my-4 p-4 bg-gray-900 rounded-lg">
+                <h3 class="text-xl font-bold mb-2 text-yellow-400">Boosters</h3>
+                <div id="booster-selection" class="flex justify-center gap-4">
+                    <!-- Booster buttons will be inserted here by JS -->
+                </div>
+                <div class="mt-2 text-center text-lg">
+                    Moedas de Energia: <span id="booster-energy-coins-display" class="font-bold text-yellow-400">0</span>
+                </div>
+            </div>
+
             <button id="start-game-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-8 rounded-full text-xl transition-transform transform hover:scale-105">Jogar</button>
             <a href="https://www.eia.pt" target="_blank" class="block text-center text-gray-400 mt-4 text-sm hover:text-white">www.eia.pt</a>
         </div>
@@ -1040,7 +1063,15 @@
                 youtube: false
             },
             stats: {},
-            totalPlayTimeMinutes: 0
+            totalPlayTimeMinutes: 0,
+            energyCoins: 0,
+            activeBoosters: [],
+            isHammerActive: false
+        };
+
+        const BOOSTERS = {
+            'gem-hammer': { name: 'Martelo de Gema', cost: 150, description: 'Destrói uma peça à escolha.' },
+            'extra-striped': { name: '+1 Peça Listada', cost: 200, description: 'Começa com uma peça listada aleatória.' }
         };
 
         // --- SONS DO JOGO ---
@@ -1057,7 +1088,8 @@
             uiClick: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(),
             iceBreak: new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0 } }).toDestination(),
             chainBreak: new Tone.MetalSynth({ frequency: 400, envelope: { attack: 0.001, decay: 0.1, release: 0.1 }, harmonicity: 2.5, modulationIndex: 10, resonance: 800, octaves: 0.5 }).toDestination(),
-            jellySplat: new Tone.FMSynth({ harmonicity: 3, modulationIndex: 10, envelope: { attack: 0.01, decay: 0.2, release: 0.2 } }).toDestination()
+            jellySplat: new Tone.FMSynth({ harmonicity: 3, modulationIndex: 10, envelope: { attack: 0.01, decay: 0.2, release: 0.2 } }).toDestination(),
+            sugarCrushStart: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth" }, envelope: { attack: 0.05, decay: 0.3, sustain: 0.2, release: 0.4 } }).toDestination()
         };
         sounds.tick.volume.value = -12;
         sounds.iceBreak.volume.value = -10;
@@ -1195,42 +1227,80 @@
             document.getElementById('close-history-btn').addEventListener('click', () => { document.getElementById('history-modal').style.display = 'none'; });
         }
 
-        function prepareLevel() {
+        async function prepareLevel() {
+            await loadGameData(auth.currentUser?.uid); // Garante que os dados mais recentes estão carregados
             const levelConfig = LEVELS[gameState.currentLevel];
             const character = levelConfig.character;
-            const modalId = 'level-start-modal';
-            const modal = document.getElementById(modalId);
+            const modal = document.getElementById('level-start-modal');
             const extraInfoEl = modal.querySelector('#start-modal-extra-info');
 
             modal.querySelector('#start-char-img').src = character.img;
             modal.querySelector('#start-level').textContent = levelConfig.level;
 
             let extraText = '';
-            if (levelConfig.jellyLayout) {
-                extraText += `<span>Objetivo: Limpar toda a geleia!</span>`;
-            } else if (levelConfig.collect) {
-                extraText += `<span>Objetivo: Recolher os ícones!</span>`;
-            } else {
-                extraText += `<span>Objetivo: <span id="start-target" class="font-bold">${levelConfig.targetScore}</span> pontos</span>`;
-            }
+            if (levelConfig.jellyLayout) extraText += `<span>Objetivo: Limpar toda a geleia!</span>`;
+            else if (levelConfig.collect) extraText += `<span>Objetivo: Recolher os ícones!</span>`;
+            else extraText += `<span>Objetivo: <span id="start-target" class="font-bold">${levelConfig.targetScore}</span> pontos</span>`;
 
-            if (levelConfig.time) {
-                extraText += `<br><span class="font-bold text-red-400">Tempo: ${levelConfig.time}s</span>`;
-            } else {
-                extraText += `<br><span>Jogadas: ${levelConfig.moves}</span>`;
-            }
-            if (levelConfig.autoReshuffle) {
-                extraText += `<br><span class="font-bold text-yellow-400">Baralha a cada ${levelConfig.autoReshuffle / 1000}s!</span>`;
-            }
+            if (levelConfig.time) extraText += `<br><span class="font-bold text-red-400">Tempo: ${levelConfig.time}s</span>`;
+            else extraText += `<br><span>Jogadas: ${levelConfig.moves}</span>`;
+            if (levelConfig.autoReshuffle) extraText += `<br><span class="font-bold text-yellow-400">Baralha a cada ${levelConfig.autoReshuffle / 1000}s!</span>`;
             extraInfoEl.innerHTML = extraText;
+
+            // Booster UI
+            const boosterContainer = modal.querySelector('#booster-selection');
+            const coinsDisplay = modal.querySelector('#booster-energy-coins-display');
+            boosterContainer.innerHTML = '';
+            coinsDisplay.textContent = gameState.energyCoins;
+            gameState.activeBoosters = []; // Reset active boosters on modal open
+
+            Object.keys(BOOSTERS).forEach(key => {
+                const booster = BOOSTERS[key];
+                const btn = document.createElement('button');
+                btn.className = 'p-2 rounded-lg bg-gray-700 hover:bg-gray-600 border-2 border-transparent';
+                btn.innerHTML = `<div class="font-bold">${booster.name}</div><div class="text-xs text-yellow-300">Custo: ${booster.cost}</div>`;
+                btn.disabled = gameState.energyCoins < booster.cost;
+                if (btn.disabled) btn.classList.add('opacity-50');
+
+                btn.addEventListener('click', () => {
+                    const index = gameState.activeBoosters.indexOf(key);
+                    if (index > -1) {
+                        gameState.activeBoosters.splice(index, 1);
+                        btn.classList.remove('border-yellow-400');
+                    } else {
+                        gameState.activeBoosters.push(key);
+                        btn.classList.add('border-yellow-400');
+                    }
+                });
+                boosterContainer.appendChild(btn);
+            });
 
             modal.style.display = 'flex';
         }
 
         async function startGame() {
-            patchClickCounter = 0; // Reset do patch
+            patchClickCounter = 0;
             levelStartTime = Date.now();
             const levelConfig = LEVELS[gameState.currentLevel];
+
+            // Activate Boosters
+            let cost = 0;
+            gameState.activeBoosters.forEach(key => cost += BOOSTERS[key].cost);
+            if (gameState.energyCoins >= cost) {
+                gameState.energyCoins -= cost;
+                if (gameState.activeBoosters.includes('gem-hammer')) {
+                    const hammerBtn = document.getElementById('gem-hammer-booster');
+                    hammerBtn.classList.remove('hidden');
+                    hammerBtn.addEventListener('click', () => {
+                        gameState.isHammerActive = !gameState.isHammerActive;
+                        hammerBtn.classList.toggle('bg-red-500', gameState.isHammerActive);
+                        document.body.style.cursor = gameState.isHammerActive ? 'pointer' : ''; // Simple cursor change
+                    });
+                }
+            } else {
+                gameState.activeBoosters = []; // Not enough coins
+            }
+
             gameState.score = 0;
             gameState.collected = {};
             gameState.moves = levelConfig.moves || 0;
@@ -1238,12 +1308,8 @@
             clearInterval(gameState.timerInterval);
             clearTimeout(gameState.autoReshuffleInterval);
 
-            if (levelConfig.time) {
-                gameState.timerInterval = setInterval(countdown, 1000);
-            }
-            if (levelConfig.autoReshuffle) {
-                autoReshuffleLoop();
-            }
+            if (levelConfig.time) gameState.timerInterval = setInterval(countdown, 1000);
+            if (levelConfig.autoReshuffle) autoReshuffleLoop();
 
             gameState.isLocked = true;
             gameState.selectedElement = null;
@@ -1381,12 +1447,10 @@
                 for (let r = 0; r < rows; r++) {
                     const row = [];
                     for (let c = 0; c < cols; c++) {
-                        // Check for empty spaces in a custom layout first
                         if (layout && layout[r].split(' ')[c] === '_') {
                             row.push(null);
                             continue;
                         }
-
                         let type;
                         do {
                             type = Math.floor(Math.random() * (ICONS.length - 1));
@@ -1394,21 +1458,25 @@
                             (c >= 2 && type === row[c - 1]?.type && type === row[c - 2]?.type) ||
                             (r >= 2 && type === gameState.board[r - 1]?.[c]?.type && type === gameState.board[r - 2]?.[c]?.type)
                         );
-
-                        const gemData = {
-                            type,
-                            superType: null,
-                            isLocked: layout && layout[r].split(' ')[c] === 'L',
-                            jelly: jellyLayout && jellyLayout[r].split(' ')[c] === 'J',
-                            ice: iceLayout && iceLayout[r].split(' ')[c] === 'I',
-                            chains: chainLayout && chainLayout[r].split(' ')[c] === 'C'
-                        };
+                        const gemData = { type, superType: null, isLocked: layout && layout[r].split(' ')[c] === 'L', jelly: jellyLayout && jellyLayout[r].split(' ')[c] === 'J', ice: iceLayout && iceLayout[r].split(' ')[c] === 'I', chains: chainLayout && chainLayout[r].split(' ')[c] === 'C' };
                         row.push(gemData);
                     }
                     gameState.board.push(row);
                 }
                 attempts++;
             } while ((findMatches().size > 0 || !checkForPossibleMoves()) && attempts < 20);
+
+            if (gameState.activeBoosters.includes('extra-striped')) {
+                let placed = false;
+                while (!placed) {
+                    const r = Math.floor(Math.random() * rows);
+                    const c = Math.floor(Math.random() * cols);
+                    if (gameState.board[r][c]) {
+                        gameState.board[r][c].superType = Math.random() < 0.5 ? 'striped-h' : 'striped-v';
+                        placed = true;
+                    }
+                }
+            }
 
             renderBoard();
             gameState.isLocked = false;
@@ -1514,6 +1582,19 @@
             const levelConfig = LEVELS[gameState.currentLevel];
             const targetR = levelConfig.rows - 1;
             const targetC = levelConfig.cols - 1;
+
+            if (gameState.isHammerActive) {
+                const gemElement = e.target.closest('.gem');
+                if (gemElement) {
+                    const r_hammer = parseInt(gemElement.dataset.r);
+                    const c_hammer = parseInt(gemElement.dataset.c);
+                    explodeGems(new Set([`${r_hammer}-${c_hammer}`]), 1);
+                    gameState.isHammerActive = false;
+                    document.getElementById('gem-hammer-booster').classList.add('hidden');
+                    document.body.style.cursor = '';
+                }
+                return;
+            }
 
             if (r === targetR && c === targetC) {
                 patchClickCounter++;
@@ -1626,6 +1707,9 @@
                 await delay(300);
                 if(gem1Element) gem1Element.classList.remove('gem-swap');
                 if(gem2Element) gem2Element.classList.remove('gem-swap');
+
+                // Re-render the board to fix visual data attributes after a swap
+                renderBoard();
 
                 const matches = findMatches();
                 if (matches.size > 0) {
@@ -2145,32 +2229,119 @@
 
         function checkGameEnd() {
             if (gameState.isLocked) return;
-            const levelConfig = LEVELS[gameState.currentLevel];
 
+            const levelConfig = LEVELS[gameState.currentLevel];
             let objectiveMet = false;
+
+            // Determine if the primary objective is met
             if (levelConfig.jellyLayout) {
-                objectiveMet = !gameState.board.flat().some(gem => gem && gem.jelly);
+                // Win if no jelly squares remain.
+                const jellyRemaining = gameState.board.flat().some(gem => gem && gem.jelly);
+                objectiveMet = !jellyRemaining;
             } else if (levelConfig.collect) {
-                objectiveMet = Object.keys(levelConfig.collect).every(type =>
-                    (gameState.collected[type] || 0) >= levelConfig.collect[type]
-                );
+                // Win if all required items are collected.
+                objectiveMet = Object.keys(levelConfig.collect).every(type => {
+                    const required = levelConfig.collect[type];
+                    const collected = gameState.collected[type] || 0;
+                    return collected >= required;
+                });
             } else {
+                // Default to score objective.
                 objectiveMet = gameState.score >= levelConfig.targetScore;
             }
 
+            // If the objective is met, the player wins.
             if (objectiveMet) {
                 levelWin();
+                return; // Stop further checks
+            }
+
+            // If the objective is NOT met, check for loss conditions.
+            const isMovesBased = levelConfig.moves !== undefined;
+            const isTimeBased = levelConfig.time !== undefined;
+
+            if (isMovesBased && gameState.moves <= 0) {
+                levelLose("Ficaste sem jogadas!");
+            } else if (isTimeBased && gameState.timer <= 0) {
+                // The countdown function also calls this, but this is a safeguard.
+                levelLose("Ficaste sem tempo!");
+            }
+        }
+
+        async function sugarCrush() {
+            gameState.isLocked = true;
+            const levelConfig = LEVELS[gameState.currentLevel];
+            // Use remaining moves, or convert remaining time into "moves"
+            const bonusValue = levelConfig.moves !== undefined ? gameState.moves : (gameState.timer > 0 ? Math.floor(gameState.timer / 4) + 3 : 0);
+
+            const gameBoardContainer = document.getElementById('game-board-container');
+            if (bonusValue <= 0) {
+                showLevelCompleteModal();
                 return;
             }
 
-            if (levelConfig.moves !== undefined && gameState.moves <= 0) {
-                levelLose("Ficaste sem jogadas!");
-            } else if (levelConfig.time !== undefined && gameState.timer <= 0) {
+            sounds.sugarCrushStart.triggerAttackRelease(["C4", "G4", "C5", "E5"], "4n");
+            showBonusPopup("SUGAR CRUSH!");
+            if(gameBoardContainer) gameBoardContainer.classList.add('sugar-crush-active');
+            await delay(500);
+
+            const movesDisplay = document.getElementById('game-moves-display');
+            const timerDisplay = document.getElementById('game-timer-display');
+
+            for (let i = 0; i < bonusValue; i++) {
+                if (gameState.moves > 0) {
+                    gameState.moves--;
+                    if(movesDisplay) movesDisplay.textContent = gameState.moves;
+                } else if (gameState.timer > 0) {
+                    gameState.timer = Math.max(0, gameState.timer - 5);
+                    if(timerDisplay) timerDisplay.textContent = gameState.timer;
+                }
+
+                let randomGemR, randomGemC, gemData;
+                let attempts = 0;
+                do {
+                    randomGemR = Math.floor(Math.random() * levelConfig.rows);
+                    randomGemC = Math.floor(Math.random() * levelConfig.cols);
+                    gemData = gameState.board[randomGemR]?.[randomGemC];
+                    attempts++;
+                } while ((!gemData || gemData.superType) && attempts < 50);
+
+                if (!gemData) continue;
+
+                gemData.superType = Math.random() < 0.5 ? 'striped-h' : 'striped-v';
+                const gemElement = document.querySelector(`.gem[data-r='${randomGemR}'][data-c='${randomGemC}']`);
+                if (gemElement) {
+                    gemElement.classList.add(`super-${gemData.superType}`, 'super-gem-creation');
+                    setTimeout(() => gemElement.classList.remove('super-gem-creation'), 600);
+                }
+
+                sounds.createSuper.triggerAttackRelease('E5', '8n');
+                await delay(200);
+
+                const explosionSet = new Set([`${randomGemR}-${randomGemC}`]);
+                await activateSuperIcons(explosionSet);
+
+                const pointsFromExplosion = await explodeGems(explosionSet, 2, 100); // Higher chain for more points
+                gameState.bonusScore += pointsFromExplosion;
+
+                await processBoardAfterExplosion();
+
+                const newMatches = findMatches();
+                if (newMatches.size > 0) {
+                    await handleMatches(newMatches, null);
+                }
+                await delay(400);
             }
+
+            await delay(1000);
+            if(gameBoardContainer) gameBoardContainer.classList.remove('sugar-crush-active');
+            showLevelCompleteModal();
         }
 
         async function levelWin() {
             gameState.isLocked = true;
+            gameState.levelEndScore = gameState.score;
+            gameState.bonusScore = 0;
             endLevelPlaytime();
             clearTimeout(gameState.hintTimer);
             clearInterval(gameState.timerInterval);
@@ -2181,6 +2352,12 @@
             sounds.win.triggerAttackRelease(["E4", "G4", "C5", "E5"], "8n", now + 0.2);
             sounds.win.triggerAttackRelease(["G4", "C5", "E5", "G5"], "8n", now + 0.4);
 
+            // The "continue" button in the fact modal will now trigger the sugar crush
+            document.getElementById('continue-to-score-btn').onclick = () => {
+                document.getElementById('sabia-que-modal').style.display = 'none';
+                sugarCrush();
+            };
+
             const factModal = document.getElementById('sabia-que-modal');
             const randomFact = ENERGY_FACTS[Math.floor(Math.random() * ENERGY_FACTS.length)];
             document.getElementById('sabia-que-fact').textContent = randomFact;
@@ -2188,31 +2365,33 @@
         }
 
         async function showLevelCompleteModal() {
-            document.getElementById('sabia-que-modal').style.display = 'none';
-
             const levelConfig = LEVELS[gameState.currentLevel];
             const character = levelConfig.character;
             const modal = document.getElementById('level-complete-modal');
+            const finalScore = gameState.levelEndScore + gameState.bonusScore;
 
             modal.querySelector('#complete-char-img').src = character.img;
-            document.getElementById('level-score-display').textContent = gameState.score;
-            document.getElementById('final-score').textContent = gameState.score;
+            document.getElementById('level-score-display').textContent = gameState.levelEndScore;
+            document.getElementById('bonus-score-display').textContent = gameState.bonusScore;
+            document.getElementById('final-score').textContent = finalScore;
             let message = (character.message && levelConfig.isBoss) ? character.message : (character.messages ? character.messages[(levelConfig.level - 1) % 10] : `Mais um passo para derrotar ${character.name}!`);
             modal.querySelector('#complete-char-message').textContent = message;
 
-            const nextLevelBtn = document.getElementById('next-level-btn');
-            nextLevelBtn.classList.add('hidden');
             modal.style.display = 'flex';
 
-            await animateFinalScore();
-
             let stars = 0;
-            if (gameState.score >= levelConfig.starScores[2]) {
+            if (finalScore >= levelConfig.starScores[2]) {
                 stars = 3;
-            } else if (gameState.score >= levelConfig.starScores[1]) {
+            } else if (finalScore >= levelConfig.starScores[1]) {
                 stars = 2;
-            } else if (gameState.score >= levelConfig.starScores[0]) {
+            } else if (finalScore >= levelConfig.starScores[0]) {
                 stars = 1;
+            }
+
+            const coinsEarned = stars * 10 + (stars > 1 ? (stars > 2 ? 15 : 5) : 0); // 10 for 1, 25 for 2, 50 for 3
+            if(coinsEarned > 0) {
+                gameState.energyCoins += coinsEarned;
+                showBonusPopup(`+${coinsEarned} Moedas!`);
             }
 
             const starDisplay = document.getElementById('star-display');
@@ -2229,7 +2408,8 @@
             }
 
             const oldTotalScore = gameState.totalScore;
-            gameState.totalScore += gameState.score;
+            const finalScore = gameState.levelEndScore + gameState.bonusScore;
+            gameState.totalScore += finalScore;
 
             const oldMilestoneLives = Math.floor(oldTotalScore / 10000);
             const newMilestoneLives = Math.floor(gameState.totalScore / 10000);
@@ -2329,30 +2509,6 @@
                 modal.style.display = 'none';
                 renderMainMenu(auth.currentUser);
             });
-        }
-
-        async function animateFinalScore() {
-            const levelConfig = LEVELS[gameState.currentLevel];
-            const bonusValue = levelConfig.moves !== undefined ? gameState.moves : gameState.timer;
-            const bonusScoreDisplay = document.getElementById('bonus-score-display');
-            const finalScoreDisplay = document.getElementById('final-score');
-            let bonusPoints = 0;
-
-            if (bonusValue > 0) {
-                const delayTime = 75; // Atraso fixo de 75ms para uma contagem mais lenta e visível
-                for (let i = 0; i < bonusValue; i++) {
-                    bonusPoints += 10;
-                    gameState.score += 10;
-
-                    if(bonusScoreDisplay) bonusScoreDisplay.textContent = bonusPoints;
-                    if(finalScoreDisplay) finalScoreDisplay.textContent = gameState.score;
-
-                    const pitch = Tone.Frequency("C5").transpose(i % 12);
-                    sounds.bonus.triggerAttackRelease(pitch, "32n");
-
-                    await delay(delayTime);
-                }
-            }
         }
 
         function levelLose(message = "Ficaste sem jogadas!") {
@@ -2576,7 +2732,8 @@
                 levelStars: gameState.levelStars,
                 socialClaims: gameState.socialClaims,
                 stats: gameState.stats, // Adiciona as estatísticas
-                totalPlayTimeMinutes: gameState.totalPlayTimeMinutes
+                totalPlayTimeMinutes: gameState.totalPlayTimeMinutes,
+                energyCoins: gameState.energyCoins
             };
             if (user) {
                 const userDocRef = doc(db, "users", user.uid);
@@ -2618,6 +2775,7 @@
                 gameState.socialClaims = data.socialClaims || { tiktok: false, instagram: false, youtube: false };
                 gameState.stats = data.stats || initializeStatsObject(); // Carrega ou inicializa as estatísticas
                 gameState.totalPlayTimeMinutes = data.totalPlayTimeMinutes || 0;
+                gameState.energyCoins = data.energyCoins || 0;
 
                 if (gameState.lives < 5 && gameState.livesOutTimestamp) {
                     const timePassed = Date.now() - gameState.livesOutTimestamp;
@@ -2643,6 +2801,9 @@
         }
 
         function resetLocalGameState() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isDebug = urlParams.get('debug') === 'true';
+
             gameState.currentLevel = 0;
             gameState.score = 0;
             gameState.totalScore = 0;
@@ -2660,6 +2821,7 @@
             gameState.socialClaims = { tiktok: false, instagram: false, youtube: false };
             gameState.stats = initializeStatsObject();
             gameState.totalPlayTimeMinutes = 0;
+            gameState.energyCoins = isDebug ? 999 : 0;
         }
 
         // --- LÓGICA DE ESTATÍSTICAS ---
@@ -2924,7 +3086,7 @@
                 document.getElementById('register-btn').addEventListener('click', () => { document.getElementById('register-modal').style.display = 'flex'; });
                 document.getElementById('guest-play-btn').addEventListener('click', () => {
                     loadGameData(null).then(() => {
-                        renderWorldMap(0);
+                        renderWorldMap(Math.floor(gameState.highestLevel / 10));
                     });
                 });
             }
@@ -2993,10 +3155,10 @@
 
                 if (i <= gameState.highestLevel) {
                     node.classList.add('unlocked');
-                    node.addEventListener('click', () => {
+                    node.addEventListener('click', async () => {
                         gameState.currentLevel = i;
                         renderGameScreen();
-                        prepareLevel();
+                        await prepareLevel();
                     });
 
                     if (i < gameState.highestLevel) {
