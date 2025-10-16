@@ -168,6 +168,15 @@
             0%, 100% { color: white; transform: scale(1); }
             50% { color: #ef4444; transform: scale(1.1); }
         }
+
+        .objective-near-complete {
+            animation: flash-green 1s infinite;
+        }
+
+        @keyframes flash-green {
+            0%, 100% { transform: scale(1); color: white; }
+            50% { transform: scale(1.05); color: #86efac; }
+        }
         .hint {
             animation: hint-pulse 1s infinite;
         }
@@ -305,6 +314,18 @@
         @keyframes sugar-crush-pulse {
             0%, 100% { box-shadow: inset 0 0 0 0 rgba(255, 255, 150, 0); }
             50% { box-shadow: inset 0 0 30px 15px rgba(255, 255, 150, 0.4); }
+        }
+
+        .screen-shake {
+            animation: shake-hard 0.4s;
+        }
+
+        @keyframes shake-hard {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
         }
 
         /* Animações de Combo */
@@ -830,7 +851,7 @@
         // IMPORTANTE: COLE A SUA CONFIGURAÇÃO DO FIREBASE AQUI
         // #######################################################################
         const firebaseConfig = {
-            apiKey: "AIzaSyDbT3GVrCodS7ay2S3uLqxyjGRjh-5OgiQ",
+            apiKey: "SUA_API_KEY_AQUI", // IMPORTANTE: Substitua pela sua chave de API do Firebase
             authDomain: "eiacrush.firebaseapp.com",
             projectId: "eiacrush",
             storageBucket: "eiacrush.firebasestorage.app",
@@ -1376,27 +1397,42 @@
 
             const targetScoreDisplay = document.getElementById('game-target-display');
             const objectiveDisplay = document.getElementById('objective-display');
+            const levelConfig = LEVELS[gameState.currentLevel];
+            let isNearComplete = false;
 
-            if (LEVELS[gameState.currentLevel].jellyLayout) {
+            if (levelConfig.jellyLayout) {
                 const jellyRemaining = gameState.board.flat().filter(gem => gem && gem.jelly).length;
                 objectiveDisplay.innerHTML = `
                     <div class="text-sm opacity-80">Geleia</div>
                     <div id="game-jelly-display" class="text-2xl font-bold">${jellyRemaining}</div>
                 `;
-            } else if (LEVELS[gameState.currentLevel].collect) {
+                if (jellyRemaining > 0 && jellyRemaining <= 3) {
+                    isNearComplete = true;
+                }
+            } else if (levelConfig.collect) {
+                let totalRemaining = 0;
                 let html = '<div class="text-sm opacity-80">Recolher</div><div class="flex justify-center items-center gap-2">';
-                for (const type in LEVELS[gameState.currentLevel].collect) {
-                    const remaining = Math.max(0, LEVELS[gameState.currentLevel].collect[type] - (gameState.collected[type] || 0));
+                for (const type in levelConfig.collect) {
+                    const remaining = Math.max(0, levelConfig.collect[type] - (gameState.collected[type] || 0));
+                    totalRemaining += remaining;
                     html += `<div class="flex items-center">${ICONS[type]}<span class="text-lg font-bold ml-1">${remaining}</span></div>`;
                 }
                 html += '</div>';
                 objectiveDisplay.innerHTML = html;
+                if (totalRemaining > 0 && totalRemaining <= 3) {
+                    isNearComplete = true;
+                }
             } else {
                 objectiveDisplay.innerHTML = `
                     <div class="text-sm opacity-80">Objetivo</div>
-                    <div id="game-target-display" class="text-2xl font-bold">${LEVELS[gameState.currentLevel].targetScore}</div>
+                    <div id="game-target-display" class="text-2xl font-bold">${levelConfig.targetScore}</div>
                 `;
+                if (gameState.score >= levelConfig.targetScore * 0.9 && gameState.score < levelConfig.targetScore) {
+                    isNearComplete = true;
+                }
             }
+
+            objectiveDisplay.classList.toggle('objective-near-complete', isNearComplete);
 
             const gameLivesDisplay = document.getElementById('game-lives-display');
             if (gameLivesDisplay) gameLivesDisplay.textContent = gameState.lives;
@@ -2015,6 +2051,8 @@
             // Caso 3: Embrulhada + Embrulhada
             else if (types[0] === 'wrapped' && types[1] === 'wrapped') {
                 showSuperIconPopup('wrapped-wrapped');
+                document.getElementById('game-container').classList.add('screen-shake');
+                setTimeout(() => document.getElementById('game-container').classList.remove('screen-shake'), 400);
                 // Explosão 5x5 centrada no destino da jogada (r2, c2)
                 for (let dr = -2; dr <= 2; dr++) {
                     for (let dc = -2; dc <= 2; dc++) {
@@ -2029,6 +2067,8 @@
             // Caso 4: Listada + Embrulhada
             else if (types[0].startsWith('striped') && types[1] === 'wrapped') {
                 showSuperIconPopup('striped-wrapped');
+                document.getElementById('game-container').classList.add('screen-shake');
+                setTimeout(() => document.getElementById('game-container').classList.remove('screen-shake'), 400);
                 // 3 linhas e 3 colunas centradas no destino (r2,c2)
                 for (let i = -1; i <= 1; i++) {
                     const rowToClear = r2 + i;
